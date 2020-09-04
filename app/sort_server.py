@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, send_from_directory
 from textwrap import TextWrapper
 import json
@@ -21,7 +22,8 @@ def download_file(filename):
     base_dir = Path('.')
     files = [f for f in base_dir.glob('*.py')]
     with open(files[0], 'r') as f:
-        return ''.join(f.readlines())
+        content = ''.join(f.readlines())
+        return render_template('fileviewer.html', context=content)
         # j = ''
         # wrapper = TextWrapper(width=100)
         # text = ''
