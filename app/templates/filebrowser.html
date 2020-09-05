@@ -1,0 +1,8 @@
+Folders:
+{% for item in context.folders %}
+<li>{{ item }} </li>
+{% endfor %}
+Files:
+{% for item in context.files %}
+<li><a href="{{ item.rstrip('.py') }}">{{ item }}</a> </li>
+{% endfor %}

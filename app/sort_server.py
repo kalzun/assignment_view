@@ -13,32 +13,29 @@ app = Flask(__name__,
 # export FLASK_APP=sort_server.py
 # flask run
 
-UPLOAD_FOLDER = './static/uploads/'
 app.config.from_object(__name__)
 
-@app.route('/uploads/<path:filename>')
-def download_file(filename):
-    print(f'Hewre {UPLOAD_FOLDER}: {filename}')
+
+# All files
+@app.route('/submissions/')
+def show_all_submissions():
     base_dir = Path('.')
-    files = [f for f in base_dir.glob('*.py')]
+    folders = [fo.name for fo in base_dir.iterdir() if fo.is_dir()]
+    files = [f.name for f in base_dir.glob('*.py')]
+    content = {'folders': folders,
+               'files': files,
+               }
+    return render_template('filebrowser.html', context=content)
+
+
+# Specific file
+@app.route('/submissions/<path:filename>')
+def get_specific_file(filename):
+    base_dir = Path('.')
+    files = [f for f in base_dir.glob('*.py') if filename == f.name.rstrip('.py')]
     with open(files[0], 'r') as f:
         content = ''.join(f.readlines())
         return render_template('fileviewer.html', context=content)
-        # j = ''
-        # wrapper = TextWrapper(width=100)
-        # text = ''
-        # for line in f:
-        #     text = text + line
-        # return ''.join(wrapper.wrap(text))
-        # return json.dumps(f.readlines())
-        # return json.dumps(
-        #     {1:(''.join(f.readlines()))})
-    # return files[0].read_text()
-    # return ''.join(files)
-    # return send_from_directory(app.config['UPLOAD_FOLDER'],
-    #                            filename, as_attachment=True)
-
-
 
 @app.route('/hello/')
 @app.route('/hello/<name>')
