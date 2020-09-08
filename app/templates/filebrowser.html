@@ -1,8 +1,14 @@
 Folders:
+{{ request.path }}
+url_rule.endpoint : {{ request.url_rule.endpoint }}
 {% for item in context.folders %}
-<li>{{ item }} </li>
+<li><a href="{{ item }}">{{ item }}</a> </li>
+{# comment
+<!-- <li><a href="{{ request.path }}{{ item }}">{{ item }}</a> </li> -->
+<!-- <li><a href="{{ request.path }}{{ url_for('show_all_submissions_in_folder', folder=item, filename='') }}">{{ item }}</a> </li> -->
+ #}
 {% endfor %}
 Files:
 {% for item in context.files %}
-<li><a href="{{ item.rstrip('.py') }}">{{ item }}</a> </li>
+<li><a href="{{ item }}">{{ item }}</a> </li>
 {% endfor %}
