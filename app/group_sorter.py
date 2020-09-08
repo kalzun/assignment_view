@@ -103,8 +103,19 @@ def get_path_file_of_student(studentcode: str, folder: Path):
     # folder = Path(submissions_folder)
     if folder.exists():
         files = [child for child in folder.iterdir() if studentcode in child.name.lower()]
-        # if len(files) > 1:
-        #     raise Exception(f'Found {len(files)} files when searching for file containing "{studentcode}".')
+        # Rewriting this comprehension, to include handins without studentcode in name of file...
+        if len(files) == 0: # Student have NOT included studentcode in filename...
+            # Do a slow lookup in csv-file.
+            # TODO: fix a quicker one...
+            with open(csvfile, 'r') as fh:
+                content = csv.reader(fh)
+                for line in content:
+                    if studentcode in line[positions['usercode']]:
+                        print(studentcode, line[positions['usercode']])
+                        studentname = ''.join(line[positions['name']].lower().replace(',', '').split())
+                        print(studentname)
+                        files = files = [child for child in folder.iterdir() if studentname in child.name.lower()]
+
         return files
 
 def build_group_overview():
@@ -118,7 +129,7 @@ def build_group_overview():
             GROUPS[n] = groupset
 
 def find_group(group_number: int) -> set:
-    group_name = 'Gruppe ' + str(group_number)
+    group_name = f'Gruppe {group_number} '
     group_set = set()
     with open(csvfile, 'r') as fh:
         content = csv.reader(fh)
