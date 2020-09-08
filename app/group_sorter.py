@@ -134,5 +134,5 @@ def find_group(group_number: int) -> set:
 
 
 if __name__ == '__main__':
-    filename = '1599122728_293__INFO132-Temaoppgave_1_submissions.zip'
+    filename = '1599552932_61__INFO132-Temaoppgave_1_submissions.zip'
     unzip_file(filename)
