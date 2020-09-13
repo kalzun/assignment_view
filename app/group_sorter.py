@@ -24,7 +24,13 @@ def get_submission_name(zipname: str) -> str:
     Regular zipfile-name could be:
     '1599224423_837__INFO132-Temaoppgave_1_submissions.zip'
     [random_number] [coursecode] [submission_name]
+
     '''
+    # If zipname is passed as a stringified path with folder, eg:
+    # 'zips/1599224423_837__INFO132-Temaoppgave_1_submissions.zip',
+    # this function strips the folders.
+    # folder_pos = zipname.rfind('/')
+    # zipname = zipname if folder_pos == -1 else zipname[folder_pos+1:]
     start, end = zipname.find(COURSECODE), zipname.find('submissions')
     if start == -1 or end == -1:
         # Did not find what we were after.
@@ -53,8 +59,10 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submission'):
     submission_name = get_submission_name(zipname)
     root_submission = Path(submissions_folder)
     name_submission = root_submission / Path(submission_name)
-    if not root_submission.exists() and not name_submission.exists():
+    print(name_submission)
+    if not root_submission.exists():
         root_submission.mkdir()
+    if not name_submission.exists():
         name_submission.mkdir()
 
     if not GROUPS:
@@ -145,6 +153,7 @@ def find_group(group_number: int) -> set:
 
 
 if __name__ == '__main__':
-    filename = '1600024103_721__INFO132-Egenretting_Temaoppgave_1__submissions.zip'
-    unzip_file(filename)
+    folder = Path('zips')
+    filename = Path('1600024103_721__INFO132-Egenretting_Temaoppgave_1__submissions.zip')
+    unzip_file(str(folder / filename))
 
