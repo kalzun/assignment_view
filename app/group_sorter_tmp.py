@@ -36,8 +36,6 @@ def get_zips() -> list:
     files = [str(f) for f in app_dir.glob('*.zip') if COURSECODE in f.name]
     return files
 
-
-
 def unzip_file(filename) -> None:
     if not Path(filename).exists():
         return False
