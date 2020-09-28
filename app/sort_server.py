@@ -36,7 +36,7 @@ def get_folders(folder='', group=0):
     theme_dir = submissions_dir.joinpath(Path(folder))
     if group != 0:
         theme_dir = theme_dir.joinpath(str(group))
-    folders = [fo.name for fo in theme_dir.iterdir() if fo.is_dir()]
+    folders = sorted([fo.name for fo in theme_dir.iterdir() if fo.is_dir()])
     files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()])
     return render_template('filebrowser.html', context={'folders': folders,
                                                        'files': files})

@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import time, ctime
 from zipfile import ZipFile
 import csv
 import shutil
@@ -151,9 +152,23 @@ def find_group(group_number: int) -> set:
 
     return group_set
 
+def get_newest_file(zips):
+    '''
+    Find the most recent created file
+    zips: Path
+    returns a Path or None
+    '''
+    now = time()
+    newest_file = None
+    most_recent = now
+    for f in zips.iterdir():
+        if (this_filetime := (now - f.stat().st_mtime)) < most_recent:
+            most_recent = this_filetime
+            newest_file = f
+    return newest_file.name
+
 
 if __name__ == '__main__':
     folder = Path('zips')
-    filename = Path('1600719397_661__INFO132-Temaoppgave_3_submissions.zip')
+    filename = get_newest_file(folder)
     unzip_file(str(folder / filename))
-
