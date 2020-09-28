@@ -154,6 +154,6 @@ def find_group(group_number: int) -> set:
 
 if __name__ == '__main__':
     folder = Path('zips')
-    filename = Path('1600024103_721__INFO132-Egenretting_Temaoppgave_1__submissions.zip')
+    filename = Path('1600719397_661__INFO132-Temaoppgave_3_submissions.zip')
     unzip_file(str(folder / filename))
 
