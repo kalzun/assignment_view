@@ -15,6 +15,10 @@ app = Flask(__name__,
 # To run the development server:
 # export FLASK_APP=sort_server.py
 # flask run
+app.config.update(
+    TESTING=True,
+    TEMPLATES_AUTO_RELOAD = True,
+)
 
 app.config.from_object(__name__)
 
@@ -49,5 +53,22 @@ def get_specific_file(folder, group, filename):
     filepath = group_dir.joinpath(filename)
     with open(filepath, 'r') as f:
         content = ''.join(f.readlines())
-        return render_template('fileviewer.html', context=content)
+        return render_template('fileviewer.html', context=content, filename=get_studentcode_from_filename(filename))
+
+
+def get_studentcode_from_filename(filename):
+    '''
+    Studentcode consists of three letters and three int
+    if not found, return name of student
+    '''
+    def valid_student_code(code):
+        left, right = code[:3], code[3:]
+        return len(left) == 3 and len(right) == 3
+
+    splitted = filename.replace('.', '_').split('_')
+    for elem in splitted:
+        if valid_student_code(elem):
+            return elem
+    else:
+        return filename[:filename.find('_')]
 

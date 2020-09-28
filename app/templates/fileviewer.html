@@ -3,14 +3,25 @@
 <head>
     <title>Small app of calm</title>
     <link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/styles/solarized-dark.min.css">
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/styles/tomorrow.min.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"> 
 <style>
 body {
 
-    background: #002b36;
+    < -- background: #002b36; -->
 }
+
+.invisible {
+    visibility: hidden;
+}
+
+#info-success-copy {
+  position: relative;
+  display: inline-block;
+}
+        
 </style>
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
 <script charset="UTF-8" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/languages/python.min.js"></script>
  <script>hljs.initHighlightingOnLoad();</script>
 <!-- and it's easy to individually load additional languages -->
@@ -19,13 +30,81 @@ body {
     <!-- <script>hljs.initHighlightingOnLoad();</script> -->
 </head>
 <body>
-{% if context %}
-<div>  
-   <pre><code class="python">{{ context }}
-   </code></pre>
-</div>
-{% else %}
-  <h1>Could not find file</h1>
-{% endif %}
+  <section class="section">
+        <div class="container">  
+            <div class="student-code">
+            Student-code: <input type="text" type="text" value="{{filename}}" id="studentcode" readonly>
+            <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
+            <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
+            <span id="info-success-copy" class="tag is-success is-light invisible">Copied to clipboard!</span>
+        </div>
+        {% if context %}
+        <div class="container">  
+            <div>
+               <pre><code class="python" id="submissioncode">{{ context }}
+               </code></pre>
+            </div>
+        </div>
+        {% else %}
+          <h1>Could not find file</h1>
+        {% endif %}
+
+        </div>
+  </section>
+
+<footer class="footer">
+  <div class="content has-text-centered">
+    <p>
+      <strong>A little helper of calm</strong> by <a href="https://longrind.com">Erik And</a>. </p>
+
+  </div>
+</footer>
+
+    <script>
+        function copyStudentcode() {
+          /* Get the text field */
+          var copyText = document.getElementById("studentcode");
+
+          /* Select the text field */
+          copyText.select();
+          copyText.setSelectionRange(0, 99999); /*For mobile devices*/
+
+          /* Copy the text inside the text field */
+          document.execCommand("copy");
+
+          /* Alert the copied text */
+          <!-- alert("Copied the text: " + copyText.value); -->
+          
+          toggleSuccessInfo("info-success-copy");
+            
+        }; 
+
+        function copyStudentsubmission() {
+          /* Get the text field */
+          const el = document.createElement('textarea');
+          el.value = document.getElementById("submissioncode").textContent;
+          el.setAttribute('readonly', '');
+          el.style.position = 'absolute';
+          el.style.left = '-9999px';
+          document.body.appendChild(el);
+          el.select();
+          document.execCommand('copy');
+          document.body.removeChild(el);
+
+          toggleSuccessInfo("info-success-copy");
+        } 
+        function toggleSuccessInfo(elemid){
+          document.getElementById(elemid).classList.toggle("invisible");
+          let promise = new Promise(function(resolve, reject) {
+              setTimeout(() => resolve("done"), 1000);
+            });
+          promise.then(
+              () => {document.getElementById(elemid).classList.toggle("invisible");}
+          ); 
+            
+        }
+    </script>
+
+
 </body>
 </html>
