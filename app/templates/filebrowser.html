@@ -1,14 +1,83 @@
-Folders:
+<!doctype html>
+<html>
+<head>
+    <title>Small app of calm</title>
+    <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/styles/tomorrow.min.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"> 
+<style>
+body {
+
+    < -- background: #002b36; -->
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+#info-success-copy {
+  position: relative;
+  display: inline-block;
+}
+        
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
+<script charset="UTF-8" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/languages/python.min.js"></script>
+ <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+    <section class="hero">
+  <div class="hero-body">
+    <div class="container">
+      <h1 class="title">
+        INFO132 
+      </h1>
+      <h2 class="subtitle">
+        Teaching assistants little helper
+      </h2>
+    </div>
+  </div>
+</section>
+    <div class="container">
+Path:
 {{ request.path }}
-url_rule.endpoint : {{ request.url_rule.endpoint }}
+
+    <div class="container">
+    <table class="table is-striped">
+        <thead>
+            <tr>
+                {% if context.folders %}
+                <th>Folders</th>
+                {% elif context.files %}
+                <th>Files</th>
+                {% endif  %}
+            </tr>
+        </thead>
+    <tbody>
 {% for item in context.folders %}
-<li><a href="{{ item }}">{{ item }}</a> </li>
+<tr>
+<td><a href="{{ item }}">{{ item }}</a> </td>
+</tr>
 {# comment
 <!-- <li><a href="{{ request.path }}{{ item }}">{{ item }}</a> </li> -->
 <!-- <li><a href="{{ request.path }}{{ url_for('show_all_submissions_in_folder', folder=item, filename='') }}">{{ item }}</a> </li> -->
  #}
 {% endfor %}
-Files:
 {% for item in context.files %}
-<li><a href="{{ item }}">{{ item }}</a> </li>
+<tr>
+<td><a href="{{ item }}">{{ item }}</a> </td>
+</tr>
 {% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </div>
+<footer class="footer">
+  <div class="content has-text-centered">
+    <p>
+      <strong>A little helper of calm</strong> by <a href="https://longrind.com">Erik And</a>. </p>
+
+  </div>
+</footer>
+</body>
+</html>
