@@ -30,9 +30,9 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-# @app.route('/')
+@app.route('/')
 def index():
-    return 'Main page'
+    return render_template('index.html')
 
 @app.route('/submissions/')
 @app.route('/submissions/<folder>/')

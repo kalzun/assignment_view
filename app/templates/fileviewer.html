@@ -4,7 +4,7 @@
     <title>Small app of calm</title>
     <link rel="stylesheet"
       href="/js/highlight/styles/gruvbox-dark.css">
-     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"> 
+     <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
 <style>
 
 .invisible {
@@ -15,6 +15,13 @@
   position: relative;
   display: inline-block;
 }
+
+
+  #result-code-ran {
+      min-height: 50px;
+
+}
+
         
 </style>
 <script src="/js/highlight/highlight.pack.js"></script>
@@ -36,7 +43,7 @@
   <section class="section">
         <div class="container">  
             <div class="student-code">
-            Student-code: <input type="text" type="text" value="{{filename}}" id="studentcode" readonly>
+            Student: <input type="text" type="text" value="{{filename}}" id="studentcode" readonly>
             <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
             <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
             <span id="info-success-copy" class="tag is-success is-light invisible">Copied to clipboard!</span>
@@ -52,7 +59,7 @@
     <div class="media-content">
       <div class="content">
         <p>
-          <strong>John Smith</strong> <small>@johnsmith</small> <small>31m</small>
+          <strong>Result:</strong>
           <br>
                <pre><code class="python" id="result-code-ran"></code></pre>
                <div id="running"></div>
