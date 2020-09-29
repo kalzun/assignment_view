@@ -121,12 +121,25 @@ class Redirect:
 redirect = Redirect()
 import sys
 sys.stdout = redirect
+sys.stderr = redirect
 #result = document["esult-code-ran"]
 #result.textContent = 'Hiyea!'
 </script>
 
     <script>
 
+        function clearUp() {
+            const result = document.getElementById("result-code-ran");
+            const previousRun = document.getElementById("running");
+            previousRun.textContent = '';
+            result.textContent = '';
+        }
+
+        function runCodeInPython() {
+            clearUp();
+            createPythonCode();
+            brython();
+        }
 
         function copyStudentcode() {
           /* Get the text field */
