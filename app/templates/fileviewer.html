@@ -11,7 +11,7 @@
     visibility: hidden;
 }
 
-#info-success-copy {
+#info-success-copy-code #info-success-copy-submission {
   position: relative;
   display: inline-block;
 }
@@ -42,14 +42,22 @@
 <body onload="brython()">
 
   <section class="section">
-        <div class="container">  
-            <div class="student-code">
-            Student: <input type="text" type="text" value="{{filename}}" id="studentcode" readonly>
+      <div class="container">
+      <nav class="level">
+          <div class="level-left">
+                Student: <input class="input" type="text" type="text" value="{{filename}}" id="studentcode" readonly>
             <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
+            <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
+          </div>
+          <div class="level-item">
             <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
-            <span id="info-success-copy" class="tag is-success is-light invisible">Copied to clipboard!</span>
+            <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
+          </div>
+          <div class="level-right">
             <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
-        </div>
+          </div>
+      </nav>
+      </div>
         {% if context %}
         <div class="container">  
         
@@ -60,9 +68,16 @@
     <div class="media-content">
       <div class="content">
         <p>
-          <strong>Result:</strong>
+        <nav class="level">
+            <div class="level-left">
+              Result:
+            </div>
+            <div class="level-left">
+            <button class="button" onclick="clearUp()">Clear result</button>
+            </div>
+        </nav>
           <br>
-               <pre><code class="python" id="result-code-ran"></code></pre>
+               <pre><code class="python" id="result-code-ran">Run the code, see the results here...</code></pre>
                <div id="running"></div>
         </p>
       </div>
@@ -104,7 +119,7 @@
 <footer class="footer">
   <div class="content has-text-centered">
     <p>
-      <strong>A little helper of calm</strong> by <a href="https://longrind.com">Erik And</a>. </p>
+      <strong>A little app of calm</strong> by <a href="https://longrind.com">Erik And</a>. </p>
 
   </div>
 </footer>
@@ -163,7 +178,7 @@ sys.stderr = redirect
           /* Alert the copied text */
           <!-- alert("Copied the text: " + copyText.value); -->
           
-          toggleSuccessInfo("info-success-copy");
+          toggleSuccessInfo("info-success-copy-code");
             
         }; 
 
@@ -179,7 +194,7 @@ sys.stderr = redirect
           document.execCommand('copy');
           document.body.removeChild(el);
 
-          toggleSuccessInfo("info-success-copy");
+          toggleSuccessInfo("info-success-copy-submission");
         } 
 
         function toggleSuccessInfo(elemid){
@@ -192,12 +207,9 @@ sys.stderr = redirect
           ); 
             
         }
-    </script>
-
 
     
-    <script>
-        shortcut.add("ctrl+y", function() {console.log('ueu')});
+        shortcut.add("ctrl+y", copyStudentcode);
         shortcut.add("ctrl+Y", copyStudentsubmission);
     </script>
 
