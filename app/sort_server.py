@@ -63,7 +63,7 @@ def get_specific_file(folder, group, filename):
 
 
 def update_newest_file():
-    get_newest_file(Path('zips')
+    get_newest_file(Path('zips'))
 
 def get_studentcode_from_filename(filename):
     '''
