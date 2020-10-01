@@ -3,8 +3,9 @@ import os
 from flask import Flask, render_template, send_from_directory, redirect, url_for, safe_join, abort
 from textwrap import TextWrapper
 import json
-
 from pathlib import Path
+
+from .group_sorter import get_newest_file
 
 
 app = Flask(__name__,
@@ -60,6 +61,9 @@ def get_specific_file(folder, group, filename):
         content = ''.join(f.readlines())
         return render_template('fileviewer.html', context=content, filename=get_studentcode_from_filename(filename))
 
+
+def update_newest_file():
+    get_newest_file(Path('zips')
 
 def get_studentcode_from_filename(filename):
     '''
