@@ -2,6 +2,7 @@ from pathlib import Path
 from time import time, ctime
 from zipfile import ZipFile
 import csv
+import logging
 import shutil
 import tempfile
 
@@ -18,6 +19,16 @@ positions = {
 COURSECODE = 'INFO132'
 N_OF_GROUPS = 22
 GROUPS = {}
+
+# Logging setup
+LOGFOLDER = Path('logs')
+LOGFILENAME = 'group_sorter.log'
+logging.basicConfig(
+                    filename=LOGFOLDER / LOGFILENAME,
+                    format='%(levelname)s:%(asctime)s - %(message)s',
+                    level=logging.DEBUG,
+)
+logging.info('Started')
 
 def get_submission_name(zipname: str) -> str:
     '''
@@ -46,6 +57,7 @@ def get_zips() -> list:
 
 
 def unzip_file(filename) -> None:
+    logging.info(f'Unzipping {filename}')
     if not Path(filename).exists():
         return False
     with ZipFile(filename, 'r') as zref:
@@ -152,6 +164,7 @@ def find_group(group_number: int) -> set:
 
     return group_set
 
+
 def get_newest_file(zips):
     '''
     Find the most recent created file
@@ -167,8 +180,18 @@ def get_newest_file(zips):
             newest_file = f
     return newest_file.name
 
+def already_unzipped(filename):
+    with open(LOGFOLDER / LOGFILENAME) as logfile:
+        for line in logfile.readlines()[::-1]:
+            if filename in line:
+                return True
+        else:
+            return False
+
 
 if __name__ == '__main__':
     folder = Path('zips')
     filename = get_newest_file(folder)
-    unzip_file(str(folder / filename))
+    # Check if already unzipped this file
+    if not already_unzipped(filename):
+        unzip_file(str(folder / filename))
