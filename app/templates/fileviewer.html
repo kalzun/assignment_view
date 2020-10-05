@@ -45,11 +45,6 @@
       <div class="container">
       <nav class="level">
           <div class="level-left">
-              {% if update_info %}
-              {% for info in update_info %}
-                {{ info }}
-                {% endfor %}
-                {% endif%}
 
                 Student: <input class="input" type="text" type="text" value="{{studentcode}}" id="studentcode" readonly>
             <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
@@ -145,7 +140,7 @@ from browser import document
 
 class Redirect:
     def write(self, *args, output_id='result-code-ran', end='\n', sep=' '):
-        document[output_id].textContent += sep.join(args) + end
+        document[output_id].textContent += sep.join(args)
 
 redirect = Redirect()
 import sys
