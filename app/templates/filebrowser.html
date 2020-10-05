@@ -39,11 +39,19 @@ body {
   </div>
 </section>
     <div class="container">
-Path:
-{{ request.path }}
+        <span class="tag is-light">
+            Path:
+            {{ request.path }}
+        </span>
+              {% if context.update_info %}
+              <span class="tag is-info is-light">Last file updated:</span>
+              {% for info in context.update_info %}
+ <span class="tag is-success is-light">{{ info }}</span>
+                {% endfor %}
+                {% endif%}
 
     <div class="container">
-    <table class="table is-striped">
+    <table class="table is-striped is-fullwidth">
         <thead>
             <tr>
                 {% if context.folders %}

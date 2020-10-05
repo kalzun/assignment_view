@@ -45,7 +45,13 @@
       <div class="container">
       <nav class="level">
           <div class="level-left">
-                Student: <input class="input" type="text" type="text" value="{{filename}}" id="studentcode" readonly>
+              {% if update_info %}
+              {% for info in update_info %}
+                {{ info }}
+                {% endfor %}
+                {% endif%}
+
+                Student: <input class="input" type="text" type="text" value="{{studentcode}}" id="studentcode" readonly>
             <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
             <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
           </div>
