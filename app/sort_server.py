@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 dotenv_path = Path(__file__) / '.env'  # Path to .env file
 load_dotenv(dotenv_path)
 
-
 app = Flask(__name__,
             static_url_path='',
             static_folder='static',
@@ -100,8 +99,6 @@ def get_file_update_info(filepath):
     Converted to ctime
     '''
     return ctime(Path(filepath).stat().st_mtime)
-
-
 
 
 def get_studentcode_from_filename(filename):

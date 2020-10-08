@@ -54,9 +54,6 @@
             <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
             <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
           </div>
-          <div class="level-right">
-            <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
-          </div>
       </nav>
       </div>
         {% if context %}
@@ -82,29 +79,15 @@
                <div id="running"></div>
         </p>
       </div>
-      <nav class="level is-mobile">
-        <div class="level-left">
-          <a class="level-item" aria-label="reply">
-            <span class="icon is-small">
-              <i class="fas fa-reply" aria-hidden="true"></i>
-            </span>
-          </a>
-          <a class="level-item" aria-label="retweet">
-            <span class="icon is-small">
-              <i class="fas fa-retweet" aria-hidden="true"></i>
-            </span>
-          </a>
-          <a class="level-item" aria-label="like">
-            <span class="icon is-small">
-              <i class="fas fa-heart" aria-hidden="true"></i>
-            </span>
-          </a>
-        </div>
-      </nav>
     </div>
   </article>
 </div>
+    <nav class=level">
+          <div class="level-item">
+            <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
+          </div>
 
+    </nav>
             <div>
                <pre><code class="python" id="submissioncode">{{ context }}
                </code></pre>
