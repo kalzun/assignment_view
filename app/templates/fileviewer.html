@@ -165,7 +165,7 @@ sys.stderr = redirect
         function copyStudentsubmission() {
           /* Get the text field */
           const el = document.createElement('textarea');
-          el.value = document.getElementById("submissioncode").textContent;
+          el.value = editor.getValue();
           el.setAttribute('readonly', '');
           el.style.position = 'absolute';
           el.style.left = '-9999px';
