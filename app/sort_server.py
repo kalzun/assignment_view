@@ -1,5 +1,6 @@
 # from werkzeug.security import safe_join
 import os
+import subprocess as subproc
 from flask import Flask, render_template, send_from_directory, redirect, url_for, safe_join, abort
 from textwrap import TextWrapper
 import json
@@ -11,6 +12,16 @@ from dotenv import load_dotenv
 dotenv_path = Path(__file__) / '.flaskenv'  # Path to .env file
 load_dotenv(dotenv_path)
 
+# Do a manual check if on windows, to set the env-variables for flask to run:
+if os.name == 'nt':
+    subproc.check_output(['set', 'FLASK_ENV=development'])
+    subproc.check_output(['set', 'FLASK_APP=sort_server'])
+
+
+# To run the development server:
+# export FLASK_APP=sort_server.py
+# flask run
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='static',
@@ -18,9 +29,6 @@ app = Flask(__name__,
             )
 
 
-# To run the development server:
-# export FLASK_APP=sort_server.py
-# flask run
 
 app.config.from_object(__name__)
 
