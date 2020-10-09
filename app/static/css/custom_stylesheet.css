@@ -1,0 +1,25 @@
+
+.submission {
+    min-height: 500px;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+#info-success-copy-code #info-success-copy-submission {
+  position: relative;
+  display: inline-block;
+}
+
+#submissioncode {
+    position: absolute;
+    width: 100%;
+    height: 400px;
+}
+
+  #result-code-ran {
+      min-height: 50px;
+
+}
+
