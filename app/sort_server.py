@@ -8,7 +8,7 @@ from time import ctime
 from .group_sorter import LOGFOLDER, LOGFILENAME, get_submission_name
 from dotenv import load_dotenv
 
-dotenv_path = Path(__file__) / '.env'  # Path to .env file
+dotenv_path = Path(__file__) / '.flaskenv'  # Path to .env file
 load_dotenv(dotenv_path)
 
 app = Flask(__name__,
