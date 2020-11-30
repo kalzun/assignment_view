@@ -7,7 +7,9 @@ import shutil
 import tempfile
 
 
-csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
+# csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
+# Place the csvfile in the zips_folder
+
 submissions_folder = 'submissions'
 
 positions = {
@@ -55,15 +57,15 @@ def get_zips() -> list:
     return files
 
 
-
 def unzip_file(filename) -> None:
-    logging.info(f'Unzipping {filename}')
+    logging.info(f'Unzipping... ')
     if not Path(filename).exists():
         return False
     with ZipFile(filename, 'r') as zref:
         tmp_dir = tempfile.TemporaryDirectory()
         zref.extractall(tmp_dir.name)
         sort_to_group_folders(tmp_dir.name, filename)
+    logging.info(f'Successfully unzipped {filename}')
 
 
 def sort_to_group_folders(tmpdir_name: str, zipname: str='submission'):
@@ -72,7 +74,7 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submission'):
     submission_name = get_submission_name(zipname)
     root_submission = Path(submissions_folder)
     name_submission = root_submission / Path(submission_name)
-    print(name_submission)
+    print(f'Extracting: {name_submission}')
     if not root_submission.exists():
         root_submission.mkdir()
     if not name_submission.exists():
@@ -130,6 +132,7 @@ def get_path_file_of_student(studentcode: str, folder: Path):
         if len(files) == 0: # Student have NOT included studentcode in filename...
             # Do a slow lookup in csv-file.
             # TODO: fix a quicker one...
+            csvfile = get_csv_filename()
             with open(csvfile, 'r') as fh:
                 content = csv.reader(fh)
                 for line in content:
@@ -138,6 +141,18 @@ def get_path_file_of_student(studentcode: str, folder: Path):
                         files = files = [child for child in folder.iterdir() if studentname in child.name.lower()]
 
         return files
+
+def get_csv_filename(folder='zips'):
+    '''
+    Returns the filename of the csv-file stored in zips-folder
+    '''
+    csvs = [f for f in Path(folder).iterdir() if f.suffix == '.csv']
+    if len(csvs) >= 1:
+        return csvs[0]
+    else:
+        logging.error(f'CSV-file missing')
+        raise FileNotFoundError('CSV-file does not exist in zips-folder')
+
 
 def build_group_overview():
     for n in range(N_OF_GROUPS):
@@ -152,6 +167,7 @@ def build_group_overview():
 def find_group(group_number: int) -> set:
     group_name = f'Gruppe {group_number} '
     group_set = set()
+    csvfile = get_csv_filename()
     with open(csvfile, 'r') as fh:
         content = csv.reader(fh)
         for i, line in enumerate(content):
