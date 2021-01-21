@@ -16,13 +16,29 @@
 <!-- Top section --> 
 <section class="section">
   <div class="container">
+      <div class="notification is-light">
   <nav class="level">
       <div class="level-left">
             Student: <input class="input" type="text" type="text" value="{{studentcode}}" id="studentcode" readonly>
         <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
         <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
       </div>
+
+      <a href="../" class="button">{{ name_submission }}</a>
+      <a href="./" class="button">Group {{group}}</a>
+      <div class="cycle-students">
+          {% if prev_submission %}
+              <a href="{{prev_submission}}" class="button">&lt; Previous</a>
+          {% endif %}
+          {% if next_submission %}
+              <a href="{{next_submission}}" class="button">Next &gt;</a>
+          {% else %}
+              <a href="#" class="button">Finito!</a>
+          {% endif %}
+      </div>
+      
   </nav>
+  </div>
   </div>
 </section>
 

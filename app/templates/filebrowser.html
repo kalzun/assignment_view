@@ -11,6 +11,11 @@ body {
     < -- background: #002b36; -->
 }
 
+
+.menu-button {
+    margin-left: 20px;
+}
+
 .invisible {
     visibility: hidden;
 }
@@ -38,6 +43,17 @@ body {
     </div>
   </div>
 </section>
+
+
+  <nav class="level">
+
+      <div class="level-item">
+        <h1>{{ context.submission }}</h1>
+        <a href="../" class="button menu-button">Back</a>
+      </div>
+  </nav>
+
+
     <div class="container">
         <span class="tag is-light">
             Path:
@@ -83,8 +99,7 @@ body {
 <footer class="footer">
   <div class="content has-text-centered">
     <p>
-      <strong>A little helper of calm</strong> by <a href="https://longrind.com">Erik And</a>. </p>
-
+      <strong>A little app of calm</strong> by <a href="https://github.com/kalzun">Erik And</a>. </p>
   </div>
 </footer>
 </body>
