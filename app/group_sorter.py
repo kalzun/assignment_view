@@ -8,7 +8,7 @@ import tempfile
 import os
 from dotenv import load_dotenv
 
-dotenv_path = Path(__file__) / ".semester_config"  # Path to .env file
+dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
