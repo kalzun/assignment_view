@@ -4,7 +4,7 @@ Clone the repository:
 
 Make a virtualenvironment, enter directory and activate the virtualenvironment:  
 `virtualenv assignment_view`  
-`cd assignmen_view`  
+`cd assignment_view`  
 `source bin/activate`  
 
 Install requirements:  
