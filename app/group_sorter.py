@@ -20,6 +20,7 @@ positions = {
 
 with open('semester.json') as f:
     SETTINGS = json.load(f)
+
 COURSECODE = SETTINGS['COURSECODE']
 N_OF_GROUPS = int(SETTINGS['N_OF_GROUPS'])
 GROUPS = {}
