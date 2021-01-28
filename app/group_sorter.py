@@ -5,7 +5,11 @@ import csv
 import logging
 import shutil
 import tempfile
+import os
+from dotenv import load_dotenv
 
+dotenv_path = Path(__file__) / ".semester_config"  # Path to .env file
+load_dotenv(dotenv_path)
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
 # Place the csvfile in the zips_folder
@@ -18,8 +22,8 @@ positions = {
     'group_info': 4,
 }
 
-COURSECODE = 'INFO132'
-N_OF_GROUPS = 22
+COURSECODE = os.getenv("COURSECODE")
+N_OF_GROUPS = os.getenv("N_OF_GROUPS")
 GROUPS = {}
 
 # Logging setup
@@ -191,6 +195,9 @@ def get_newest_file(zips):
     newest_file = None
     most_recent = now
     for f in zips.iterdir():
+        # If file is not a zip, skip
+        if f.suffix != '.zip':
+            continue
         if (this_filetime := (now - f.stat().st_mtime)) < most_recent:
             most_recent = this_filetime
             newest_file = f
