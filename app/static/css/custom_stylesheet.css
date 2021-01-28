@@ -14,12 +14,17 @@
 
 #submissioncode {
     position: absolute;
-    width: 100%;
-    height: 1000px;
+    width: 50%;
+    height: 600px;
 }
 
-  #result-code-ran {
+#result-code-ran {
       min-height: 50px;
+}
 
+#feedback-field {
+    position: absolute;
+    width: 50%;
+    height: 600px;
 }
 

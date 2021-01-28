@@ -1,3 +1,12 @@
+window.addEventListener('DOMContentLoaded',function () {
+    buttons = document.querySelectorAll(".button");
+    buttons.forEach(function(button) {
+        button.addEventListener("click", tempStoreFeedback);
+    });
+    loadTempStoredFeedback();
+});
+
+
 function createPythonCode() {
     const pythonScript = document.createElement("script");
     const parent = document.getElementById("running");
@@ -19,23 +28,25 @@ function runCodeInPython() {
     brython();
 }
 
-function copyStudentcode() {
+function copyStudentcode(show = true) {
   /* Get the text field */
   var copyText = document.getElementById("studentcode");
+  if (show) {
+      /* Select the text field */
+      copyText.select();
+      copyText.setSelectionRange(0, 99999); /*For mobile devices*/
 
-  /* Select the text field */
-  copyText.select();
-  copyText.setSelectionRange(0, 99999); /*For mobile devices*/
+      /* Copy the text inside the text field */
+      document.execCommand("copy");
 
-  /* Copy the text inside the text field */
-  document.execCommand("copy");
-
-  /* Alert the copied text */
-  <!-- alert("Copied the text: " + copyText.value); -->
-  
-  toggleSuccessInfo("info-success-copy-code");
-    
-}; 
+      /* Alert the copied text */
+      <!-- alert("Copied the text: " + copyText.value); -->
+      toggleSuccessInfo("info-success-copy-code");
+  }
+  else {
+      return copyText.value; 
+  }
+} 
 
 function copyStudentsubmission() {
   /* Get the text field */
@@ -60,6 +71,18 @@ function toggleSuccessInfo(elemid){
   promise.then(
       () => {document.getElementById(elemid).classList.toggle("invisible");}
   ); 
-    
+}
+
+function tempStoreFeedback() {
+    let tmpFeed = feedback.getValue()
+    // console.log(tmpFeed);
+    localStorage.setItem(copyStudentcode(false), tmpFeed);
+}
+
+function loadTempStoredFeedback() {
+    // let feedback = document.getElementById("feedback-field");
+    rv = localStorage.getItem(copyStudentcode(false));
+    if (rv)
+        feedback.setValue(rv);
 }
 

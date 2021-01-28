@@ -12,7 +12,7 @@
 </head>
 
 <body onload="brython()">
-
+    
 <!-- Top section --> 
 <section class="section">
   <div class="container">
@@ -33,7 +33,7 @@
           {% if next_submission %}
               <a href="{{next_submission}}" class="button">Next &gt;</a>
           {% else %}
-              <a href="#" class="button">Finito!</a>
+              <a href="#" class="button" >Finito!</a>
           {% endif %}
       </div>
       
@@ -71,26 +71,39 @@
   </div>
 </nav>
 
-<section class="submission">
-    <code class="python" id="submissioncode">{{ context }}</code>
-    {% else %}
-    <h1>Could not find file</h1>
-    {% endif %}
+<section class="section">
+    <div class="container">
+        <div class="columns">
+            <div class="column">
+                <code class="python" id="submissioncode">{{ context }}</code>
+                {% else %}
+                <h1>Could not find file</h1>
+                {% endif %}
+            </div>
+            <div class="column">
+                <div id="feedback-field">Feedback to {{ studentcode }}:</div>
+            </div>
+        </div>
+    </div>
 </section>
-
-<footer class="footer">
-  <div class="content has-text-centered">
-    <p>
-      <strong>A little app of calm</strong> by <a href="https://github.com/kalzun">Erik And</a>. </p>
-  </div>
-</footer>
 
 <script src="/js/custom_base.js" type="text/javascript" charset="utf-8"></script>
 <script src="/js/custom_py.py" type="text/python" charset="utf-8"></script>
 <script src="/js/ace/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
+    var feedback = ace.edit("feedback-field");
+    feedback.setTheme("ace/theme/github");
+    feedback.setOptions({
+        showLineNumbers: false,
+        displayIndentGuides: false,
+        highlightGutterLine: false,
+        printMargin: false,
+        showGutter: false,
+        minLines: 1,
+    });
+    feedback.session.setMode("ace/mode/markdown");
     var editor = ace.edit("submissioncode");
-    editor.setTheme("ace/theme/monokai");
+    editor.setTheme("ace/theme/gruvbox");
     editor.session.setMode("ace/mode/python");
 </script>
 </body>
