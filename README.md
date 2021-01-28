@@ -1,3 +1,12 @@
+
+# What is this?
+An approach to grade submissions from Canvas in a more fluent way, making it possible to run python code directly in the app.
+
+
+# What does it look like?
+![Front](app/demo/front.png)  
+![fileviewer](app/demo/fileviewer.png)  
+
 # Steps to install in local virtual environment
 
 
