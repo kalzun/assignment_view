@@ -11,13 +11,13 @@ Install requirements:
 `pip install -r requirements.txt`
 
 Export groups from Canvas (this you only need once pr semester):
-![export_groups](demo/export_groups.png)
+![export_groups](app/demo/export_groups.png)
 
 Download submissions from Canvas:
-![download_submissions](demo/download_submissions.png)
+![download_submissions](app/demo/download_submissions.png)
 
 Copy CSV and ZIP to zips folder in the app-directory:
-![csv_zip_to_folder](demo/csv_zip_to_folder.png)
+![csv_zip_to_folder](app/demo/csv_zip_to_folder.png)
 
 Make sure `semester.json` is setup to the correct coursecode and number of groups.
 
