@@ -20,12 +20,6 @@ from dotenv import load_dotenv
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
 
-# Do a manual check if on windows, to set the env-variables for flask to run:
-if os.name == "nt":
-    subproc.check_output(["set", "FLASK_ENV=development"])
-    subproc.check_output(["set", "FLASK_APP=sort_server"])
-
-
 # To run the development server:
 # export FLASK_APP=sort_server.py
 # flask run
