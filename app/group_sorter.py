@@ -5,11 +5,7 @@ import csv
 import logging
 import shutil
 import tempfile
-import os
-from dotenv import load_dotenv
-
-dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
-load_dotenv(dotenv_path)
+import json
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
 # Place the csvfile in the zips_folder
@@ -22,8 +18,10 @@ positions = {
     'group_info': 4,
 }
 
-COURSECODE = os.getenv("COURSECODE")
-N_OF_GROUPS = os.getenv("N_OF_GROUPS")
+with open('semester.json') as f:
+    SETTINGS = json.load(f)
+COURSECODE = SETTINGS['COURSECODE']
+N_OF_GROUPS = int(SETTINGS['N_OF_GROUPS'])
 GROUPS = {}
 
 # Logging setup
