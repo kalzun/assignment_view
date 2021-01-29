@@ -1,5 +1,7 @@
 import pytest
+from dataclasses import dataclass
 from pathlib import Path
+import app.group_sorter as group_sorter
 from ..group_sorter import find_group, get_path_file_of_student, unzip_file, copy_files_to_folder, get_submission_name, get_newest_file
 
 group4 = {'tiw012', 'day014', 'bbr044', 'jda047', 'mfl049', 'duj015', 'hkl018', 'skn016', 'qix014', 'kkr038', 'hni030', 'pso026', 'lsv008', 'ltv010', 'cve020', 'geq014', 'foe011'}
@@ -58,6 +60,42 @@ def test_handins_with_no_studentcode():
     assert get_path_file_of_student('duq013') == False
 
 
-def test_newest_file():
+def test_get_submission_name():
+    # '1599224423_837__DATA110-Temaoppgave_1_submissions.zip'
+    assert get_submission_name('1599224423_837__DATA110-Temaoppgave_1_submissions.zip') == 'Temaoppgave_1'
+
+def test_get_submission_name_different_course(monkeypatch):
+    # '1599224423_837__INFO132-Temaoppgave_1_submissions.zip'
+    monkeypatch.setitem(group_sorter.CONFIG, 'COURSECODE', 'INFO132')
+    assert get_submission_name('1599224423_837__INFO132-Temaoppgave_1_submissions.zip') == 'Temaoppgave_1'
+
+@pytest.mark.xfail
+def test_get_submission_name_no_match():
+    # '1599224423_837__INFO132-Temaoppgave_1_submissions.zip'
+    assert get_submission_name('-Temaoppgave_1_submissions.zip') == 'Temaoppgave_1'
+
+@dataclass
+class MockPath:
+    suffix: str = '.zip'
+    st_mtime: float = 1
+    name: str = 'woaw'
+
+    def stat(self):
+        return self
+
+class MockPathIterable:
+    items = [MockPath('.zip', 2, 'noes'), MockPath(st_mtime=3, name='yes')]
+
+    def __getitem__(self, index):
+        return self.items[index]
+
+def test_newest_file(monkeypatch):
+    # Monkeypatching for the fun of it, and teaching!
+    # Patching iterdir-method, to return a mock list of mockpaths
+
+    def mock_iterdir(*args):
+        return MockPathIterable()
+    monkeypatch.setattr(Path, 'iterdir', mock_iterdir)
+
     from_folder = Path('zips')
-    assert get_newest_file(from_folder) == 'some'
+    assert get_newest_file(from_folder) == 'yes'

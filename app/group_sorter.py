@@ -2,10 +2,12 @@ from pathlib import Path
 from time import time, ctime
 from zipfile import ZipFile
 import csv
+import json
 import logging
+import re
 import shutil
 import tempfile
-import json
+
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
 # Place the csvfile in the zips_folder
@@ -21,8 +23,10 @@ positions = {
 with open('semester.json') as f:
     SETTINGS = json.load(f)
 
-COURSECODE = SETTINGS['COURSECODE']
-N_OF_GROUPS = int(SETTINGS['N_OF_GROUPS'])
+CONFIG = dict(
+    COURSECODE = SETTINGS['COURSECODE'],
+    N_OF_GROUPS = int(SETTINGS['N_OF_GROUPS'])
+)
 GROUPS = {}
 
 # Logging setup
@@ -40,23 +44,24 @@ def get_submission_name(zipname: str) -> str:
     Extract the submission name from the name of the zipfile.
     Regular zipfile-name could be:
     '1599224423_837__INFO132-Temaoppgave_1_submissions.zip'
-    [random_number] [coursecode] [submission_name]
-
+    [ctime] [coursecode] [submission_name]
     '''
     # If zipname is passed as a stringified path with folder, eg:
     # 'zips/1599224423_837__INFO132-Temaoppgave_1_submissions.zip',
     # this function strips the folders.
     # folder_pos = zipname.rfind('/')
     # zipname = zipname if folder_pos == -1 else zipname[folder_pos+1:]
-    start, end = zipname.find(COURSECODE), zipname.find('submissions')
-    if start == -1 or end == -1:
+
+    match = re.search('(' + CONFIG['COURSECODE'][:-3] + '[0-9]{3,4})-(.*[0-9])_(submissions)', zipname)
+    if match:
+        return match.group(2)
+    else:
         # Did not find what we were after.
         return zipname.rstrip('.zip')
-    return zipname[start+len(COURSECODE):end].strip('-').rstrip('_')
 
 def get_zips() -> list:
     app_dir = Path('.')
-    files = [str(f) for f in app_dir.glob('*.zip') if COURSECODE in f.name]
+    files = [str(f) for f in app_dir.glob('*.zip') if CONFIG['COURSECODE'] in f.name]
     return files
 
 
@@ -158,7 +163,7 @@ def get_csv_filename(folder='zips'):
 
 
 def build_group_overview():
-    for n in range(N_OF_GROUPS):
+    for n in range(CONFIG['N_OF_GROUPS']):
         groupset = find_group(n)
         if len(groupset) <= 0:
             continue
@@ -184,16 +189,18 @@ def find_group(group_number: int) -> set:
     return group_set
 
 
-def get_newest_file(zips):
+def get_newest_file(zips: str = 'zips'):
     '''
     Find the most recent created file
     zips: Path
     returns a Path or None
+    Afterthought; The zipfile from canvas already includes ctime in the
+    filename, making this function a bit over the board
     '''
     now = time()
     newest_file = None
     most_recent = now
-    for f in zips.iterdir():
+    for f in Path(zips).iterdir():
         # If file is not a zip, skip
         if f.suffix != '.zip':
             continue
@@ -212,8 +219,8 @@ def already_unzipped(filename):
 
 
 if __name__ == '__main__':
-    folder = Path('zips')
+    folder = 'zips'
     filename = get_newest_file(folder)
     # Check if already unzipped this file
     if not already_unzipped(filename):
-        unzip_file(str(folder / filename))
+        unzip_file(str(Path(folder) / filename))
