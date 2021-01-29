@@ -5,8 +5,9 @@ An approach to grade submissions from Canvas in a more fluent way, making it pos
 
 # What does it look like?
 ![Front](app/demo/front.png)  
+---
 ![fileviewer](app/demo/fileviewer.png)  
-
+---
 # Steps to install in local virtual environment
 
 
@@ -27,11 +28,11 @@ An approach to grade submissions from Canvas in a more fluent way, making it pos
 4. **Export groups from Canvas (this you only need once pr semester):**  
 ![export_groups](app/demo/export_groups.png)  
 
-
+---
 5. **Download submissions from Canvas:**  
 ![download_submissions](app/demo/download_submissions.png)  
 
-
+---
 6. **Copy CSV and ZIP to zips folder in the app-directory:**  
 ![csv_zip_to_folder](app/demo/csv_zip_to_folder.png)  
 
