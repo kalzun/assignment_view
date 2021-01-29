@@ -163,7 +163,7 @@ def get_csv_filename(folder='zips'):
 
 
 def build_group_overview():
-    for n in range(CONFIG['N_OF_GROUPS']):
+    for n in range(CONFIG['N_OF_GROUPS'] + 1):
         groupset = find_group(n)
         if len(groupset) <= 0:
             continue
