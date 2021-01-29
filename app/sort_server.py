@@ -88,7 +88,7 @@ def get_specific_file(folder, group, filename):
         get_filename_of_index(next_index, filepath),
     )
 
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         content = "".join(f.readlines())
         return render_template(
             "fileviewer.html",
