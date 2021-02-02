@@ -36,9 +36,10 @@ def get_pdf(filename):
 def pdf_to_text(html=False):
     # Returns a dictionary where keyword is the file,
     # and value is the TEXT content of the pdf
+    pdfs = get_pdfs()
     rename_files()
     all_tasks = {}
-    for pdf in get_pdfs():
+    for pdf in pdfs:
         pdf = pdf.strip(".pdf")
         if html:
             output_string = StringIO()
