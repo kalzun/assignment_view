@@ -14,7 +14,7 @@ from textwrap import TextWrapper
 import json
 from pathlib import Path
 from time import ctime
-from .group_sorter import LOGFOLDER, LOGFILENAME, get_submission_name
+from .group_sorter import CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name
 from dotenv import load_dotenv
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
@@ -67,6 +67,7 @@ def get_folders(folder="", group=0):
     return render_template(
         "filebrowser.html",
         context={
+            "coursecode": CONFIG['COURSECODE'],
             "submission": folder,
             "folders": folders,
             "files": files,
@@ -132,7 +133,7 @@ def get_latest_update_info():
     with open(LOGFOLDER / LOGFILENAME) as logfile:
         for line in logfile.readlines()[::-1]:
             # Due to logging not setup "correctly", this "improvable" double check in if:
-            if ".zip" in line and "Unzipping" in line:
+            if ".zip" in line and "unzipped" in line:
                 submission_name = get_submission_name(line)
                 return submission_name, get_zip_file_dateinfo_from_log(submission_name)
 

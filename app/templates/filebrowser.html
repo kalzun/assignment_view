@@ -5,37 +5,17 @@
     <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/styles/tomorrow.min.css">
      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"> 
-<style>
-body {
-
-    < -- background: #002b36; -->
-}
-
-
-.menu-button {
-    margin-left: 20px;
-}
-
-.invisible {
-    visibility: hidden;
-}
-
-#info-success-copy {
-  position: relative;
-  display: inline-block;
-}
-        
-</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
-<script charset="UTF-8" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/languages/python.min.js"></script>
- <script>hljs.initHighlightingOnLoad();</script>
+     <link rel="stylesheet" href="/css/custom_stylesheet.css"> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/highlight.min.js"></script>
+    <script charset="UTF-8" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.2/languages/python.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
 </head>
 <body>
     <section class="hero">
   <div class="hero-body">
     <div class="container">
       <h1 class="title">
-        INFO132 
+          {{ context.coursecode}}
       </h1>
       <h2 class="subtitle">
         Teaching assistants little helper
@@ -44,15 +24,12 @@ body {
   </div>
 </section>
 
-
   <nav class="level">
-
       <div class="level-item">
         <h1>{{ context.submission }}</h1>
         <a href="../" class="button menu-button">Back</a>
       </div>
   </nav>
-
 
     <div class="container">
         <span class="tag is-light">
@@ -62,10 +39,9 @@ body {
               {% if context.update_info %}
               <span class="tag is-info is-light">Last file updated:</span>
               {% for info in context.update_info %}
- <span class="tag is-success is-light">{{ info }}</span>
+             <span class="tag is-success is-light">{{ info }}</span>
                 {% endfor %}
                 {% endif%}
-
     <div class="container">
     <table class="table is-striped is-fullwidth">
         <thead>
@@ -80,12 +56,8 @@ body {
     <tbody>
 {% for item in context.folders %}
 <tr>
-<td><a href="{{ item }}">{{ item }}</a> </td>
+<td class="folders"><a href="{{ item }}">{{ item }}</a> </td>
 </tr>
-{# comment
-<!-- <li><a href="{{ request.path }}{{ item }}">{{ item }}</a> </li> -->
-<!-- <li><a href="{{ request.path }}{{ url_for('show_all_submissions_in_folder', folder=item, filename='') }}">{{ item }}</a> </li> -->
- #}
 {% endfor %}
 {% for item in context.files %}
 <tr>
