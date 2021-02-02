@@ -14,6 +14,8 @@ TASKS_FILE = 'tasks.json'
 
 def get_pdfs():
     # Fetch all pdfs in folder
+    if not Path(PDF_FOLDER).exists():
+        Path(PDF_FOLDER).mkdir()
     pdfs = [f.name for f in Path(PDF_FOLDER).iterdir() if f.suffix == ".pdf"]
     return pdfs
 
