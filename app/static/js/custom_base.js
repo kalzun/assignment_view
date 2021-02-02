@@ -90,8 +90,11 @@ function activateModal() {
     modal = document.getElementById("task-modal");
     modal.classList.add("is-active");
     bg_modal = document.querySelector(".modal-background");
+    d_btn_modal = document.getElementById("close-modal");
     bg_modal.addEventListener("click", function() {
-        console.log("Shoiudl femoreve");
+        modal.classList.remove("is-active");
+    });
+    d_btn_modal.addEventListener("click", function() {
         modal.classList.remove("is-active");
     });
 }

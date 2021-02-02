@@ -63,20 +63,18 @@
 
 <!-- Modal for tasks -->
 <button id="task" class="button is-primary is-light" onclick="activateModal()">Task description</button>
-
 <div id="task-modal" class="modal">
   <div class="modal-background"></div>
   <div class="modal-card">
     <header class="modal-card-head">
-      <p class="modal-card-title">Modal title</p>
-      <button class="delete" aria-label="close"></button>
+        <p class="modal-card-title">Task description</p>
+      <button id="close-modal" class="delete" aria-label="close"></button>
     </header>
     <section class="modal-card-body">
         {{ tasks }}
     </section>
     <footer class="modal-card-foot">
-      <button class="button is-success">Save changes</button>
-      <button class="button">Cancel</button>
+        <a href="/pdfs/{{ task_pdf }}" target="_blank">Open as PDF</a>
     </footer>
   </div>
 </div>

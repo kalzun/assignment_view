@@ -17,7 +17,8 @@ from pathlib import Path
 from time import ctime
 from .group_sorter import CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name
 from dotenv import load_dotenv
-from app.tasks import get_assignments
+from app.tasks import get_assignments, get_pdf
+import time
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
@@ -67,6 +68,7 @@ def get_folders(folder="", group=0):
     except ValueError:
         folders = sorted([fo.name for fo in theme_dir.iterdir() if fo.is_dir()])
     files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()])
+    submissions_dir = Path("submissions")
     return render_template(
         "filebrowser.html",
         context={
@@ -91,8 +93,6 @@ def get_specific_file(folder, group, filename):
         get_filename_of_index(prev_index, filepath),
         get_filename_of_index(next_index, filepath),
     )
-    print(folder)
-    print(ASSIGNMENTS)
 
     with open(filepath, "r", encoding="utf-8") as f:
         content = "".join(f.readlines())
@@ -105,7 +105,16 @@ def get_specific_file(folder, group, filename):
             next_submission=next_submission,
             studentcode=get_studentcode_from_filename(filename),
             tasks=Markup(ASSIGNMENTS.get(folder, f'Please copy {folder}.pdf to pdf-folder')),
+            task_pdf=folder,
         )
+
+
+@app.route("/pdfs/<filename>")
+def open_pdf(filename):
+    return send_from_directory(
+        'pdfs',
+        filename + '.pdf',
+    )
 
 
 def get_filename_of_index(index, filepath):
