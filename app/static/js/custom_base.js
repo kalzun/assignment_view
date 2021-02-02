@@ -86,3 +86,16 @@ function loadTempStoredFeedback() {
         feedback.setValue(rv);
 }
 
+function activateModal() {
+    modal = document.getElementById("task-modal");
+    modal.classList.add("is-active");
+    bg_modal = document.querySelector(".modal-background");
+    bg_modal.addEventListener("click", function() {
+        console.log("Shoiudl femoreve");
+        modal.classList.remove("is-active");
+    });
+}
+
+
+
+

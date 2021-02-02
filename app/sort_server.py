@@ -9,6 +9,7 @@ from flask import (
     url_for,
     safe_join,
     abort,
+    Markup
 )
 from textwrap import TextWrapper
 import json
@@ -16,6 +17,7 @@ from pathlib import Path
 from time import ctime
 from .group_sorter import CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name
 from dotenv import load_dotenv
+from app.tasks import get_assignments
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
@@ -34,6 +36,7 @@ app = Flask(
 
 app.config.from_object(__name__)
 
+ASSIGNMENTS = get_assignments()
 
 @app.route("/favicon.ico")
 def favicon():
@@ -88,6 +91,8 @@ def get_specific_file(folder, group, filename):
         get_filename_of_index(prev_index, filepath),
         get_filename_of_index(next_index, filepath),
     )
+    print(folder)
+    print(ASSIGNMENTS)
 
     with open(filepath, "r", encoding="utf-8") as f:
         content = "".join(f.readlines())
@@ -99,6 +104,7 @@ def get_specific_file(folder, group, filename):
             prev_submission=prev_submission,
             next_submission=next_submission,
             studentcode=get_studentcode_from_filename(filename),
+            tasks=Markup(ASSIGNMENTS.get(folder, f'Please copy {folder}.pdf to pdf-folder')),
         )
 
 

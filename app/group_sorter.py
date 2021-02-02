@@ -210,6 +210,8 @@ def get_newest_file(zips: str = 'zips'):
     return newest_file.name
 
 def already_unzipped(filename):
+    if not Path(submissions_folder).exists():
+        return False
     with open(LOGFOLDER / LOGFILENAME) as logfile:
         for line in logfile.readlines()[::-1]:
             if filename in line:
