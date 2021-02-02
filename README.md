@@ -39,6 +39,9 @@ An approach to grade submissions from Canvas in a more fluent way, making it pos
 ---
 
 7. **Now you should be able to run the program with:**  
-`./run.sh`  
+`./run.sh`  OR if you are on windows:
+
+## Windows:
+`run_windows.cmd`
 
 _Make sure `semester.json` is setup to the correct coursecode and number of groups._  
