@@ -207,7 +207,10 @@ def get_newest_file(zips: str = 'zips'):
         if (this_filetime := (now - f.stat().st_mtime)) < most_recent:
             most_recent = this_filetime
             newest_file = f
-    return newest_file.name
+    try:
+        return newest_file.name
+    except AttributeError:
+        print(f'Could not find any recent files, please check {zips}-folder')
 
 def already_unzipped(filename):
     if not Path(submissions_folder).exists():
@@ -224,5 +227,5 @@ if __name__ == '__main__':
     folder = 'zips'
     filename = get_newest_file(folder)
     # Check if already unzipped this file
-    if not already_unzipped(filename):
+    if not already_unzipped(filename) and filename is not None:
         unzip_file(str(Path(folder) / filename))
