@@ -7,6 +7,7 @@ import logging
 import re
 import shutil
 import tempfile
+from dataclasses import dataclass, field
 
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
@@ -27,7 +28,6 @@ CONFIG = dict(
     COURSECODE = SETTINGS['COURSECODE'],
     N_OF_GROUPS = int(SETTINGS['N_OF_GROUPS'])
 )
-GROUPS = {}
 
 # Logging setup
 LOGFOLDER = Path('logs')
@@ -38,6 +38,12 @@ logging.basicConfig(
                     level=logging.DEBUG,
 )
 logging.info('Started')
+
+@dataclass
+class Groups:
+    # Not typed == classvar
+    all = dict()
+
 
 def get_submission_name(zipname: str) -> str:
     '''
@@ -88,9 +94,9 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submission'):
     if not name_submission.exists():
         name_submission.mkdir()
 
-    if not GROUPS:
+    if not Groups.all:
         build_group_overview()
-    for n, studentcodes in GROUPS.items():
+    for n, studentcodes in Groups.all.items():
         to_folder = root_submission / Path(submission_name) / Path(f'{n}')
         if not to_folder.exists():
             to_folder.mkdir()
@@ -163,14 +169,16 @@ def get_csv_filename(folder='zips'):
 
 
 def build_group_overview():
-    for n in range(CONFIG['N_OF_GROUPS'] + 1):
+    for n in range(1, CONFIG['N_OF_GROUPS'] + 1):
         groupset = find_group(n)
         if len(groupset) <= 0:
             continue
-        if n in GROUPS:
-            GROUPS[n] = GROUPS[n].update(groupset)
+        if n in Groups.all:
+            # GROUPS[n] = GROUPS[n].update(groupset)
+            Groups.all[n].update(groupset)
         else:
-            GROUPS[n] = groupset
+            Groups.all[n] = groupset
+    return Groups.all
 
 def find_group(group_number: int) -> set:
     group_name = f'Gruppe {group_number} '
