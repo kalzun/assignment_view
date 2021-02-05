@@ -9,6 +9,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from itertools import zip_longest
+from datetime import datetime
 
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
@@ -72,18 +73,19 @@ def get_zips() -> list:
     return files
 
 
-def unzip_file(filename) -> None:
+def unzip_file(filepath) -> None:
     logging.info(f'Unzipping... ')
-    if not Path(filename).exists():
+    if not filepath.exists():
+        logging.warning(f'Filepath {filepath.name} does not exist... ')
         return False
-    with ZipFile(filename, 'r') as zref:
+    with ZipFile(filepath, 'r') as zref:
         tmp_dir = tempfile.TemporaryDirectory()
         zref.extractall(tmp_dir.name)
-        sort_to_group_folders(tmp_dir.name, filename)
-    logging.info(f'Successfully unzipped {filename}')
+        sort_to_group_folders(tmp_dir.name, filepath.name)
+    logging.info(f'Successfully unzipped {filepath.name}')
 
 
-def sort_to_group_folders(tmpdir_name: str, zipname: str='submission'):
+def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
     # Ensure folder structure
     # submission > "Temaoppgave1" > gruppenummer
     submission_name = get_submission_name(zipname)
@@ -205,20 +207,11 @@ def build_group_overview():
     #         Groups.all[n] = groupset
     # return Groups.all
 
-def get_time_from_file(file, human=False):
-    '''
-    Return the ctime of the file
-    or human readable if chosen
-    '''
-    # Check if filename contains ctime-info:
-    # TODO
-    ...
-
 
 def find_group():
-    csvfile = get_csv_filename()
+    csvfile, ctime_updated = get_newest_file(suffix='.csv')
     updated = csvfile.name[:15]
-    print(f"Using csv-file from {updated}")
+    print(f"Using csv-file from {updated} {datetime.utcfromtimestamp(ctime_updated)}")
     logging.info(f"Using csv-file from {updated}")
     pattern = re.compile(fr"Gruppe [1-{CONFIG['N_OF_GROUPS']}]{{1,2}}")
     with open(csvfile, 'r') as fh:
@@ -235,10 +228,10 @@ def find_group():
     logging.info(f"Studentcodes that are not sorted into groups: {Groups.not_registered}")
 
 
-def get_newest_file(zips: str = 'zips'):
+def get_newest_file(folder: str = 'zips', suffix: str = '.zip'):
     '''
     Find the most recent created file
-    zips: Path
+    folder: Path
     returns a Path or None
     Afterthought; The zipfile from canvas already includes ctime in the
     filename, making this function a bit over the board
@@ -246,24 +239,24 @@ def get_newest_file(zips: str = 'zips'):
     now = time()
     newest_file = None
     most_recent = now
-    for f in Path(zips).iterdir():
-        # If file is not a zip, skip
-        if f.suffix != '.zip':
+    for f in Path(folder).iterdir():
+        # If file is not a chosen suffix
+        if f.suffix != suffix:
             continue
         if (this_filetime := (now - f.stat().st_mtime)) < most_recent:
             most_recent = this_filetime
             newest_file = f
     try:
-        return newest_file.name
+        return newest_file, newest_file.stat().st_mtime
     except AttributeError:
-        print(f'Could not find any recent files, please check {zips}-folder')
+        print(f'Could not find any recent files, please check {folder}-folder')
 
 def already_unzipped(filename):
     if not Path(submissions_folder).exists():
         return False
     with open(LOGFOLDER / LOGFILENAME) as logfile:
         for line in logfile.readlines()[::-1]:
-            if filename in line:
+            if filename.name in line:
                 return True
         else:
             return False
@@ -271,8 +264,8 @@ def already_unzipped(filename):
 
 if __name__ == '__main__':
     folder = 'zips'
-    filename = get_newest_file(folder)
+    filepath, updated = get_newest_file()
     # Check if already unzipped this file
-    if not already_unzipped(filename) and filename is not None:
-        unzip_file(str(Path(folder) / filename))
-    validate_group_vs_csv()
+    if not already_unzipped(filepath) and filepath is not None:
+        print(f"Using file '{filepath.name}' downloaded {datetime.utcfromtimestamp(updated)}")
+        unzip_file(filepath)
