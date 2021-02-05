@@ -102,8 +102,8 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
 
     if not Groups.all:
         build_group_overview()
-    for n, studentcodes in Groups.all.items():
-        to_folder = root_submission / Path(submission_name) / Path(f'{n}')
+    for group_num, studentcodes in Groups.all.items():
+        to_folder = root_submission / Path(submission_name) / Path(f'{group_num}')
         if not to_folder.exists():
             to_folder.mkdir()
         for studentcode in studentcodes:
@@ -146,6 +146,7 @@ def copy_files_to_folder(studentcodes: set, group_num: int = 42):
 
 def get_path_file_of_student(studentcode: str, folder: Path):
     # folder = Path(submissions_folder)
+    pattern = re.compile(r"[-.,_ ]*")
     if folder.exists():
         files = [child for child in folder.iterdir() if studentcode in child.name.lower()]
         # Rewriting this comprehension, to include handins without studentcode in name of file...
@@ -157,8 +158,9 @@ def get_path_file_of_student(studentcode: str, folder: Path):
                 content = csv.reader(fh)
                 for line in content:
                     if studentcode in line[positions['usercode']]:
-                        studentname = ''.join(line[positions['name']].lower().replace(',', '').split())
-                        files = files = [child for child in folder.iterdir() if studentname in child.name.lower()]
+                        studentname = re.sub(pattern, "", line[positions['name']].lower())
+                        # studentname = ''.join(line[positions['name']].lower().replace(',', '').split())
+                        files = [child for child in folder.iterdir() if studentname in child.name.lower()]
 
         return files
 
@@ -198,20 +200,6 @@ def validate_group_vs_csv():
 
 
 def build_group_overview():
-    find_group()
-    # for n in range(1, CONFIG['N_OF_GROUPS'] + 1):
-    #     groupset = find_group(n)
-    #     if len(groupset) <= 0:
-    #         continue
-    #     if n in Groups.all:
-    #         # GROUPS[n] = GROUPS[n].update(groupset)
-    #         Groups.all[n].update(groupset)
-    #     else:
-    #         Groups.all[n] = groupset
-    # return Groups.all
-
-
-def find_group():
     csvfile, ctime_updated = get_newest_file(suffix='.csv')
     updated = csvfile.name[:15]
 
@@ -282,7 +270,6 @@ if __name__ == '__main__':
 
     with open('semester.json') as fh:
         sem = json.load(fh)
-        print(sem)
         zip_updated, csv_updated = sem.get('last_updated', {}).get('zip', 0), sem.get('last_updated', {}).get('csv', 0)
 
         if latest_zip > zip_updated or latest_csv > csv_updated and zippath is not None:
@@ -290,8 +277,4 @@ if __name__ == '__main__':
             unzip_file(zippath)
         elif not already_unzipped(zippath) and zippath is not None:
             unzip_file(zippath)
-
-
-    # Check if already unzipped this file
-    # if not already_unzipped(zippath) and filepath is not None:
 
