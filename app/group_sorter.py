@@ -8,6 +8,7 @@ import re
 import shutil
 import tempfile
 from dataclasses import dataclass, field
+from itertools import zip_longest
 
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
@@ -43,7 +44,7 @@ logging.info('Started')
 class Groups:
     # Not typed == classvar
     all = dict()
-
+    not_registered = set()
 
 def get_submission_name(zipname: str) -> str:
     '''
@@ -158,7 +159,7 @@ def get_path_file_of_student(studentcode: str, folder: Path):
 
 def get_csv_filename(folder='zips'):
     '''
-    Returns the filename of the csv-file stored in zips-folder
+    Returns the Path of the csv-file stored in zips-folder
     '''
     csvs = [f for f in Path(folder).iterdir() if f.suffix == '.csv']
     if len(csvs) >= 1:
@@ -167,34 +168,71 @@ def get_csv_filename(folder='zips'):
         logging.error(f'CSV-file missing')
         raise FileNotFoundError('CSV-file does not exist in zips-folder')
 
-
-def build_group_overview():
-    for n in range(1, CONFIG['N_OF_GROUPS'] + 1):
-        groupset = find_group(n)
-        if len(groupset) <= 0:
-            continue
-        if n in Groups.all:
-            # GROUPS[n] = GROUPS[n].update(groupset)
-            Groups.all[n].update(groupset)
-        else:
-            Groups.all[n] = groupset
-    return Groups.all
-
-def find_group(group_number: int) -> set:
-    group_name = f'Gruppe {group_number} '
-    group_set = set()
+def validate_group_vs_csv():
     csvfile = get_csv_filename()
     with open(csvfile, 'r') as fh:
-        content = csv.reader(fh)
-        for i, line in enumerate(content):
-            if group_name in line[positions['group_info']]:
-                if 'Teststudent' == line[positions['name']]:
-                    continue
-                group_set.add(
-                    line[positions['usercode']]
-                )
+        # lines = [l for l in csv.reader(fh)]
+        csvdict = csv.DictReader(fh)
+        all_students_codes = [codes['SIS Login ID'] for codes in csvdict]
+        all_students_by_groups = {(n,code) for n,group in Groups.all.items()
+                                  for code in group}
 
-    return group_set
+        # Difference from all codes vs them in groups;
+        # Other words, find the student codes that are NOT in groups
+        # diff = set(all_students_codes) - all_students_by_groups
+        # print("Not in groups: ")
+        # print(diff)
+
+        with open('validation.csv', 'w') as validate:
+            writer = csv.writer(validate)
+            # [writer.writerow((l, g)) for l,g in zip_longest(all_students_codes, all_students_by_groups)]
+        # print(Groups.all)
+        # print(len(lines), len(groups))
+
+        # assert len(Groups.all) == len(lines)
+
+
+def build_group_overview():
+    find_group()
+    # for n in range(1, CONFIG['N_OF_GROUPS'] + 1):
+    #     groupset = find_group(n)
+    #     if len(groupset) <= 0:
+    #         continue
+    #     if n in Groups.all:
+    #         # GROUPS[n] = GROUPS[n].update(groupset)
+    #         Groups.all[n].update(groupset)
+    #     else:
+    #         Groups.all[n] = groupset
+    # return Groups.all
+
+def get_time_from_file(file, human=False):
+    '''
+    Return the ctime of the file
+    or human readable if chosen
+    '''
+    # Check if filename contains ctime-info:
+    # TODO
+    ...
+
+
+def find_group():
+    csvfile = get_csv_filename()
+    updated = csvfile.name[:15]
+    print(f"Using csv-file from {updated}")
+    logging.info(f"Using csv-file from {updated}")
+    pattern = re.compile(fr"Gruppe [1-{CONFIG['N_OF_GROUPS']}]{{1,2}}")
+    with open(csvfile, 'r') as fh:
+        content = csv.DictReader(fh)
+        for line in content:
+            studentcode = line['SIS Login ID']
+            hit = pattern.search(line['Section'])
+            if hit:
+                group_num = hit.group(0)[-2:].strip()
+                Groups.all[group_num] = Groups.all.get(group_num, []) + [studentcode]
+            # Student is not a member of group?
+            else:
+                Groups.not_registered.add(studentcode)
+    logging.info(f"Studentcodes that are not sorted into groups: {Groups.not_registered}")
 
 
 def get_newest_file(zips: str = 'zips'):
@@ -237,3 +275,4 @@ if __name__ == '__main__':
     # Check if already unzipped this file
     if not already_unzipped(filename) and filename is not None:
         unzip_file(str(Path(folder) / filename))
+    validate_group_vs_csv()
