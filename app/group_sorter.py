@@ -41,6 +41,8 @@ logging.basicConfig(
 )
 logging.info('Started')
 
+LATEST_STATUS = Path('logs')
+
 @dataclass
 class Groups:
     # Not typed == classvar
@@ -83,6 +85,7 @@ def unzip_file(filepath) -> None:
         zref.extractall(tmp_dir.name)
         sort_to_group_folders(tmp_dir.name, filepath.name)
     logging.info(f'Successfully unzipped {filepath.name}')
+    update_latest_file('zip', latest_zip)
 
 
 def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
@@ -211,8 +214,10 @@ def build_group_overview():
 def find_group():
     csvfile, ctime_updated = get_newest_file(suffix='.csv')
     updated = csvfile.name[:15]
+
     print(f"Using csv-file from {updated} {datetime.utcfromtimestamp(ctime_updated)}")
     logging.info(f"Using csv-file from {updated}")
+
     pattern = re.compile(fr"Gruppe [1-{CONFIG['N_OF_GROUPS']}]{{1,2}}")
     with open(csvfile, 'r') as fh:
         content = csv.DictReader(fh)
@@ -226,6 +231,7 @@ def find_group():
             else:
                 Groups.not_registered.add(studentcode)
     logging.info(f"Studentcodes that are not sorted into groups: {Groups.not_registered}")
+    update_latest_file('csv', latest_csv)
 
 
 def get_newest_file(folder: str = 'zips', suffix: str = '.zip'):
@@ -261,11 +267,31 @@ def already_unzipped(filename):
         else:
             return False
 
+def update_latest_file(which_file: str = 'zip', updated: float = 0.0) -> None:
+    with open('semester.json', 'r') as read:
+        sem = json.load(read)
+        sem['last_updated'] = sem.get('last_updated', {})
+        sem['last_updated'][which_file] = sem['last_updated'].get(which_file, updated)
+        with open('semester.json', 'w') as out:
+            json.dump(sem, out)
 
 if __name__ == '__main__':
     folder = 'zips'
-    filepath, updated = get_newest_file()
+    zippath, latest_zip = get_newest_file()
+    csvpath, latest_csv = get_newest_file(suffix='.csv')
+
+    with open('semester.json') as fh:
+        sem = json.load(fh)
+        print(sem)
+        zip_updated, csv_updated = sem.get('last_updated', {}).get('zip', 0), sem.get('last_updated', {}).get('csv', 0)
+
+        if latest_zip > zip_updated or latest_csv > csv_updated and zippath is not None:
+            print(f"Using file '{zippath.name}' downloaded {datetime.utcfromtimestamp(latest_zip)}")
+            unzip_file(zippath)
+        elif not already_unzipped(zippath) and zippath is not None:
+            unzip_file(zippath)
+
+
     # Check if already unzipped this file
-    if not already_unzipped(filepath) and filepath is not None:
-        print(f"Using file '{filepath.name}' downloaded {datetime.utcfromtimestamp(updated)}")
-        unzip_file(filepath)
+    # if not already_unzipped(zippath) and filepath is not None:
+
