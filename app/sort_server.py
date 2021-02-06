@@ -15,7 +15,7 @@ from textwrap import TextWrapper
 import json
 from pathlib import Path
 from time import ctime
-from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name
+from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name, get_stats
 from dotenv import load_dotenv
 from app.tasks import get_assignments, get_pdf
 import time
@@ -77,7 +77,7 @@ def get_folders(folder="", group=0):
             "folders": folders,
             "files": files,
             "update_info": get_latest_update_info(),
-            "groups": Groups.all,
+            "groups": get_stats(),
         },
     )
 

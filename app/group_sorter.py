@@ -48,6 +48,10 @@ class Groups:
     # Not typed == classvar
     all = dict()
     not_registered = set()
+    stats = {
+        'submissions_total': 0,
+        'submissions_pr_group': {},
+        }
 
 def get_submission_name(zipname: str) -> str:
     '''
@@ -85,6 +89,7 @@ def unzip_file(filepath) -> None:
         zref.extractall(tmp_dir.name)
         sort_to_group_folders(tmp_dir.name, filepath.name)
     logging.info(f'Successfully unzipped {filepath.name}')
+    save_stats_of_groups()
     update_latest_file('zip', filepath.stat().st_mtime)
 
 
@@ -102,6 +107,9 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
 
     if not Groups.all:
         build_group_overview()
+
+    Groups.stats['submissions_pr_group'][submission_name] = Groups.stats.get(submission_name, {})
+
     for group_num, studentcodes in Groups.all.items():
         to_folder = root_submission / Path(submission_name) / Path(f'{group_num}')
         if not to_folder.exists():
@@ -115,34 +123,9 @@ def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
             for i in range(len(filepaths)):
                 folder_file_str = root_submission.name + '/' + filepaths[i].name
                 shutil.copy(str(filepaths[i].resolve()), str(to_folder.resolve()))
-
-
-
-
-def copy_files_to_folder(studentcodes: set, group_num: int = 42):
-    '''
-    Files to be copied to a folder.
-    Create folder as child to submissions_folder
-    '''
-    root_dir = Path('.')
-    root_submission = Path(submissions_folder)
-
-    if root_submission.exists():
-        to_folder = root_submission / Path(submission_name) / Path(f'{group_num}')
-        if not to_folder.exists():
-            to_folder.mkdir()
-
-        for studentcode in studentcodes:
-            filepaths = get_path_file_of_student(studentcode)
-
-            # Some users have handed in multiple files, be sure to copy them all
-            iterations = 1
-            if len(filepaths) > 1:
-                iterations = len(filepaths)
-            for i in range(iterations):
-                folder_file_str = root_submission.name + '/' + filepaths[i].name
-                shutil.copy(str(filepaths[i].resolve()), str(to_folder.resolve()))
-
+            # For statistics:
+            Groups.stats['submissions_total'] += 1
+            Groups.stats['submissions_pr_group'][submission_name][group_num] = Groups.stats['submissions_pr_group'][submission_name].get(group_num, 0) + 1
 
 def get_path_file_of_student(studentcode: str, folder: Path):
     # folder = Path(submissions_folder)
@@ -214,13 +197,33 @@ def build_group_overview():
             hit = pattern.search(line['Section'])
             if hit:
                 group_num = hit.group(0)[-2:].strip()
-                Groups.all[group_num] = Groups.all.get(group_num, []) + [studentcode]
+                group = Groups.all.get(group_num, set())
+                group.add(studentcode)
+                Groups.all[group_num] = group
             # Student is not a member of group?
             else:
                 Groups.not_registered.add(studentcode)
     logging.info(f"Studentcodes that are not sorted into groups: {Groups.not_registered}")
-    update_latest_file('csv', csvfile.stat().st_mtime)
+    return Groups
 
+def save_stats_of_groups():
+    with open('semester.json') as read:
+        sem = json.load(read)
+        sem['stats'] = {
+            'n_of_groups': len(Groups.all),
+            'size_of_groups': [(g, len(students)) for g, students in Groups.all.items()],
+            'submissions_total': Groups.stats['submissions_total'],
+            'submissions_pr_group': [(submission_name, [(gr, n) for groups in Groups.stats['submissions_pr_group'].values()
+                                                        for gr, n in groups.items()]) for submission_name in Groups.stats['submissions_pr_group']] ,
+        }
+        with open('semester.json', 'w') as out:
+             json.dump(sem, out, indent=4)
+
+def get_stats():
+    with open('semester.json') as fh:
+        sem = json.load(fh)
+        print(sem)
+        return sem
 
 def get_newest_file(folder: str = 'zips', suffix: str = '.zip'):
     '''
@@ -261,7 +264,7 @@ def update_latest_file(which_file: str = 'zip', updated: float = 0.0) -> None:
         sem['last_updated'] = sem.get('last_updated', {})
         sem['last_updated'][which_file] = updated
         with open('semester.json', 'w') as out:
-            json.dump(sem, out)
+            json.dump(sem, out, indent=4)
 
 if __name__ == '__main__':
     folder = 'zips'
