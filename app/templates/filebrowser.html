@@ -37,8 +37,6 @@
              <span class="tag is-success is-light">{{ info }}</span>
                 {% endfor %}
                 {% endif%}
-    <div class="container">
-        <!-- groups {{ context.groups}} -->
     <table class="table is-striped is-fullwidth">
         <thead>
             <tr>
@@ -64,6 +62,23 @@
     </table>
     </div>
     </div>
+        <div class="container">
+        <div class="column is-half is-offset-one-quarter">
+            <p class="subtitle">Submissions pr group</p>
+        {% for key, value in context.groups.stats.items() %}
+            {% if key == "submissions_pr_group" %}
+                {% for every_sub, n_submissions in value %}
+                    {% if every_sub == context.submission %}
+                            {% for gr, sub in n_submissions %}
+                            Group {{ gr }}  -  {{ sub }} / 24
+                                <progress class="progress is-primary" value="{{sub}}" max="24">15%</progress>
+                    {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+        </div>
+
 <footer class="footer">
   <div class="content has-text-centered">
     <p>
