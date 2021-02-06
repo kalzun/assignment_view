@@ -85,7 +85,7 @@ def unzip_file(filepath) -> None:
         zref.extractall(tmp_dir.name)
         sort_to_group_folders(tmp_dir.name, filepath.name)
     logging.info(f'Successfully unzipped {filepath.name}')
-    update_latest_file('zip', latest_zip)
+    update_latest_file('zip', filepath.stat().st_mtime)
 
 
 def sort_to_group_folders(tmpdir_name: str, zipname: str='submissions'):
@@ -219,7 +219,7 @@ def build_group_overview():
             else:
                 Groups.not_registered.add(studentcode)
     logging.info(f"Studentcodes that are not sorted into groups: {Groups.not_registered}")
-    update_latest_file('csv', latest_csv)
+    update_latest_file('csv', csvfile.stat().st_mtime)
 
 
 def get_newest_file(folder: str = 'zips', suffix: str = '.zip'):
@@ -259,7 +259,7 @@ def update_latest_file(which_file: str = 'zip', updated: float = 0.0) -> None:
     with open('semester.json', 'r') as read:
         sem = json.load(read)
         sem['last_updated'] = sem.get('last_updated', {})
-        sem['last_updated'][which_file] = sem['last_updated'].get(which_file, updated)
+        sem['last_updated'][which_file] = updated
         with open('semester.json', 'w') as out:
             json.dump(sem, out)
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
         sem = json.load(fh)
         zip_updated, csv_updated = sem.get('last_updated', {}).get('zip', 0), sem.get('last_updated', {}).get('csv', 0)
 
-        if latest_zip > zip_updated or latest_csv > csv_updated and zippath is not None:
+        if (latest_zip > zip_updated or latest_csv > csv_updated) and zippath is not None:
             print(f"Using file '{zippath.name}' downloaded {datetime.utcfromtimestamp(latest_zip)}")
             unzip_file(zippath)
         elif not already_unzipped(zippath) and zippath is not None:
