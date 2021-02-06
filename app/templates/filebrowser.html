@@ -64,19 +64,21 @@
     </div>
         <div class="container">
         <div class="column is-half is-offset-one-quarter">
-            <p class="subtitle">Submissions pr group</p>
-        {% for key, value in context.groups.stats.items() %}
-            {% if key == "submissions_pr_group" %}
-                {% for every_sub, n_submissions in value %}
-                    {% if every_sub == context.submission %}
-                            {% for gr, sub in n_submissions %}
-                            Group {{ gr }}  -  {{ sub }} / 24
-                                <progress class="progress is-primary" value="{{sub}}" max="24">15%</progress>
-                    {% endfor %}
+            {% if context.submission %}
+                <p class="subtitle">Submissions pr group</p>
+                {% for key, value in context.groups.stats.items() %}
+                    {% if key == "submissions_pr_group" %}
+                        {% for every_sub, n_submissions in value %}
+                            {% if every_sub == context.submission %}
+                                    {% for gr, sub in n_submissions %}
+                                    Group {{ gr }}  -  {{ sub }} / 24
+                                        <progress class="progress is-primary" value="{{sub}}" max="24">15%</progress>
+                            {% endfor %}
+                            {% endif %}
+                        {% endfor %}
                     {% endif %}
                 {% endfor %}
             {% endif %}
-        {% endfor %}
         </div>
 
 <footer class="footer">
