@@ -34,9 +34,17 @@ SUBMISSION_FOLDER = 'tmp_submission'
 
 
 course_id = '26755'
+# All submissions:
 endpoint = f'https://mitt.uib.no/api/v1/courses/{course_id}/gradebook_history/feed'
+# User endpoint - needed due to SIS-id is not included in above endpoint 
+user_endpoint =f'https://mitt.uib.no/api/v1/courses/{course_id}/users?sort=sis_id;enrollment_type[]=student'
+
 headers = {'Authorization': f'Bearer {TOKEN}'}
 payload = {'per_page': 50, 'page': 1}
+
+
+
+
 
 def request_api():
 
@@ -59,6 +67,7 @@ def request_api():
 def make_csv(resp):
     dataset = resp.json()
     all_specific_data = []
+    useradded = set()
 
     def get_sublist(sequence):
         attachments = []
@@ -75,10 +84,17 @@ def make_csv(resp):
         return attachments[0]
 
     for data in dataset:
+        # Since api returns the newest file submitted first
+        # We only include the first instance of user
+        userid = data['user_id']
+        if userid in useradded:
+            continue
+        useradded.add(userid)
+
         specific_data = {
             'assignment_id': data['assignment_id'],
             'assignment_name': data['assignment_name'],
-            'user_id': data['user_id'],
+            'user_id': userid,
             'user_name': data['user_name'],
             'current_grade': data['current_grade'],
             'current_grader': data['current_grader'],
@@ -94,6 +110,18 @@ def make_csv(resp):
     # fetch all pages
     if (n_pages := get_n_pages(resp)) > 1:
         for n in range(2, n_pages + 1):
+
+            # For testing:
+            if n == 2:
+                break
+
+            # Since api returns the newest file submitted first
+            # We only include the first instance of user
+            userid = data['user_id']
+            if userid in useradded:
+                continue
+            useradded.add(userid)
+
             payload['page'] = n
             nresponse = req.get(endpoint, headers=headers, params=payload)
             whole_data = nresponse.json()
@@ -102,7 +130,7 @@ def make_csv(resp):
                 specific_data = {
                     'assignment_id': data['assignment_id'],
                     'assignment_name': data['assignment_name'],
-                    'user_id': data['user_id'],
+                    'user_id': userid,
                     'user_name': data['user_name'],
                     'current_grade': data['current_grade'],
                     'current_grader': data['current_grader'],
