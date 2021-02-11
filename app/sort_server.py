@@ -37,6 +37,8 @@ app = Flask(
 
 app.config.from_object(__name__)
 
+SUBMISSION_FOLDER = 'api_submissions'
+
 ASSIGNMENTS = get_assignments()
 
 @app.route("/favicon.ico")
@@ -53,11 +55,11 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/submissions/")
-@app.route("/submissions/<folder>/")
-@app.route("/submissions/<folder>/<int:group>/")
+@app.route(f"/{SUBMISSION_FOLDER}/")
+@app.route(f"/{SUBMISSION_FOLDER}/<folder>/")
+@app.route(f"/{SUBMISSION_FOLDER}/<folder>/<int:group>/")
 def get_folders(folder="", group=0):
-    submissions_dir = Path("submissions")
+    submissions_dir = Path("api_submissions")
     theme_dir = submissions_dir.joinpath(Path(folder))
     if group != 0:
         theme_dir = theme_dir.joinpath(str(group))
@@ -68,7 +70,6 @@ def get_folders(folder="", group=0):
     except ValueError:
         folders = sorted([fo.name for fo in theme_dir.iterdir() if fo.is_dir()])
     files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()])
-    submissions_dir = Path("submissions")
     return render_template(
         "filebrowser.html",
         context={
@@ -82,9 +83,9 @@ def get_folders(folder="", group=0):
     )
 
 
-@app.route("/submissions/<folder>/<int:group>/<filename>")
+@app.route(f"/{SUBMISSION_FOLDER}/<folder>/<int:group>/<filename>")
 def get_specific_file(folder, group, filename):
-    submissions_dir = Path("submissions")
+    submissions_dir = Path("api_submissions")
     theme_dir = submissions_dir.joinpath(Path(folder))
     group_dir = theme_dir.joinpath(str(group))
     filepath = group_dir.joinpath(filename)

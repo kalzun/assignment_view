@@ -1,12 +1,14 @@
-import os
-import requests as req
-from requests_oauthlib import OAuth2Session, OAuth2
-from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
 from pathlib import Path
-import json
-import re
+from requests.auth import HTTPBasicAuth
+from requests_oauthlib import OAuth2Session, OAuth2
+import aiohttp
+import asyncio
 import csv
+import json
+import os
+import re
+import requests as req
 
 # Store the account info in a file named:
 env_name = '.env_secret'
@@ -43,6 +45,22 @@ headers = {'Authorization': f'Bearer {TOKEN}'}
 payload = {'per_page': 50, 'page': 1}
 
 
+
+
+async def request_api_async():
+    print('Fetching api...')
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(user_endpoint, params=payload) as response:
+
+            print("Status:", response.status)
+            print("Content-type:", response.headers)
+
+            html = await response.text()
+            print("Body:", html[:100], "...")
+
+def run_main_loop():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(request_api_async())
 
 
 
@@ -203,6 +221,7 @@ def save_data(data, page):
 
 if __name__ == '__main__':
     # get_data()
-    clear_csv()
-    make_csv(request_api())
-    download_submissions_with_api()
+    # clear_csv()
+    # make_csv(request_api())
+    # download_submissions_with_api()
+    run_main_loop()
