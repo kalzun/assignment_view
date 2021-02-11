@@ -10,7 +10,7 @@ import logging
 import os
 import re
 import requests as req
-
+import sys
 
 # Logging setup
 LOGFOLDER = Path("logs")
@@ -44,6 +44,10 @@ api_submission_folder = "api_submissions"
 
 USERS = {}
 
+# platform specific WINDOWS:
+# https://github.com/encode/httpx/issues/914#issuecomment-622586610
+if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 def get_n_pages(resp):
     link = resp.headers.get("link", 0)
@@ -146,10 +150,9 @@ async def get_specific_data(
                 ),
                 "url": get_sublist(data.get("attachments", None)).get("url", None),
             }
-            async with aiofiles.open(file, "a") as f:
+            async with aiofiles.open(file, "a", encoding="utf-8", newline="") as f:
                 row = ",".join(str(value) for value in specific_data.values())
-                await f.write(row + "\n")
-
+                await f.write("\n" + row)
 
 async def write_one(file: IO, url: str, **kwargs) -> None:
     """
@@ -263,9 +266,13 @@ async def fetch_submissions(fileinfo: list, **kwargs):
 
 def make_fileinfo_from_csv(file: IO) -> list:
     all_submissions = []
-    with open(file) as f:
+    with open(file, encoding="utf-8", newline='') as f:
         for line in f.readlines():
             line = line.strip().split(",")
+            # TODO
+            # Make a sweeter check and lookup here
+            if len(line) < 6:
+                continue
             fileinfo = {
                 "group": line[0],
                 "sis_id": line[1],
@@ -285,7 +292,7 @@ def make_fileinfo_from_csv(file: IO) -> list:
 def get_cache():
     csvfile = Path("async_assignment.csv")
     if csvfile.exists():
-        csvfile.rename("async_assignment.csv.bak")
+        csvfile.replace("async_assignment.csv.bak")
     return csvfile
 
 
