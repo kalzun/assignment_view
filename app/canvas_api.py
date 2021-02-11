@@ -289,7 +289,7 @@ def get_cache():
     return csvfile
 
 
-def build_assignments():
+async def main():
     head = req.head(gradebook_endpoint, headers=headers)
 
     # Make the urls list:
@@ -297,13 +297,18 @@ def build_assignments():
     urls = make_urls(head, pages)
 
     csvfile = get_cache()
-
-    asyncio.run(update_users())
-    asyncio.run(fetch_all_paginated_pages(file=csvfile, urls=urls))
     if not Path(api_submission_folder).exists():
         Path(api_submission_folder).mkdir()
+
+    await update_users()
+    await fetch_all_paginated_pages(file=csvfile, urls=urls)
     all_submissions = make_fileinfo_from_csv(csvfile)
-    asyncio.run(fetch_submissions(all_submissions))
+    await fetch_submissions(all_submissions)
+
+
+def build_assignments():
+    asyncio.run(main())
+
 
 
 if __name__ == "__main__":
