@@ -1,91 +1,90 @@
 from dotenv import load_dotenv
 from pathlib import Path
-from requests.auth import HTTPBasicAuth
-from requests_oauthlib import OAuth2Session, OAuth2
+from typing import IO
+import aiofiles
 import aiohttp
 import asyncio
 import csv
 import json
+import logging
 import os
 import re
 import requests as req
 
-# Store the account info in a file named:
-env_name = '.env_secret'
 
-env_path = Path('.') / env_name
+# Logging setup
+LOGFOLDER = Path("logs")
+LOGFILENAME = "group_sorter.log"
+logging.basicConfig(
+    filename=LOGFOLDER / LOGFILENAME,
+    format="%(levelname)s:%(asctime)s - %(message)s",
+    level=logging.DEBUG,
+)
+logging.info("Started")
+
+
+# Store the account info in a file named:
+env_name = ".env_secret"
+
+env_path = Path(".") / env_name
 load_dotenv(dotenv_path=env_path)
 
-USERNAME = os.getenv('USERNAME')
-TOKEN = os.getenv('TOKEN')
+USERNAME = os.getenv("USERNAME")
+TOKEN = os.getenv("TOKEN")
 
-RESP_FILE = 'apiresponse.json'
-SUBMISSION_FOLDER = 'tmp_submission'
+headers = {"Authorization": f"Bearer {TOKEN}"}
+course_id = "26755"
+gradebook_endpoint = (
+    f"https://mitt.uib.no/api/v1/courses/{course_id}/gradebook_history/feed"
+)
+sections_endpoint = (
+    f"https://mitt.uib.no/api/v1/courses/{course_id}/sections?include[]=students"
+)
+api_submission_folder = "api_submissions"
 
-# Fields to use:
-# assignment_id
-# user_id (possible, but maybe use SIS instead)
-# attachments:
-#     - display_name
-#     - filename
-#     - url
-# assignment_name
-# user_name
-# current_grade = complete | incomplete | null
-# current_grader
+USERS = {}
 
 
-course_id = '26755'
-# All submissions:
-endpoint = f'https://mitt.uib.no/api/v1/courses/{course_id}/gradebook_history/feed'
-# User endpoint - needed due to SIS-id is not included in above endpoint 
-user_endpoint =f'https://mitt.uib.no/api/v1/courses/{course_id}/users?sort=sis_id;enrollment_type[]=student'
-
-headers = {'Authorization': f'Bearer {TOKEN}'}
-payload = {'per_page': 50, 'page': 1}
-
-
+def get_n_pages(resp):
+    link = resp.headers.get("link", 0)
+    if link:
+        # Find last line
+        lines = link.split(",")
+        match = re.search("&page=[0-9]*", lines[-1])
+        # Return the number of pages
+        return int(match.group()[-2:].strip("="))
 
 
-async def request_api_async():
-    print('Fetching api...')
-    async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get(user_endpoint, params=payload) as response:
+def make_urls(head: dict, max_n_pages: int) -> list:
+    """
+    Make a list of urls from the head of api
+    Due to pagination of the API, it returns the last pagination in header['link']
+    Returns a list of all the urls from the link-header
+    So we can hit the api async
+    """
+    urls = []
+    pattern = re.compile("https:\/\/[a-zA-Z.:&=0-9?_\/\/]*")
 
-            print("Status:", response.status)
-            print("Content-type:", response.headers)
-
-            html = await response.text()
-            print("Body:", html[:100], "...")
-
-def run_main_loop():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(request_api_async())
+    for n in range(1, max_n_pages + 1):
+        match = re.search(pattern, head.headers["link"])
+        increase_pattern = re.compile("&page=[0-9]")
+        if match:
+            urls.append(increase_pattern.sub(f"&page={n}", match.group()))
+    return urls
 
 
-
-def request_api():
-
-    # API returns a pagination, here we increase the results pr per_page
-    # Must revisit this if we hit the API increasingly.
-    # Canvas is set to max 50 pr page.
-    # To see how many pages that are still available after each page, 
-    # see in header of the page under Link (relation is defined by RFC 5988)
-    # eg:
-    # <https://mitt.uib.no/api/v1/courses/26755/gradebook_history/feed?course_id=26755&format=json&page=1&per_page=50>; rel="current",
-    # <https://mitt.uib.no/api/v1/courses/26755/gradebook_history/feed?course_id=26755&format=json&page=2&per_page=50>; rel="next",
-    # <https://mitt.uib.no/api/v1/courses/26755/gradebook_history/feed?course_id=26755&format=json&page=1&per_page=50>; rel="first",
-    # <https://mitt.uib.no/api/v1/courses/26755/gradebook_history/feed?course_id=26755&format=json&page=5&per_page=50>; rel="last"
-    resp = req.get(endpoint, headers=headers, params=payload)
+async def fetch_endpoint(url: str, session: aiohttp.ClientSession, **kwargs) -> json:
+    # print(f"Fetching url {url}")
+    resp = await session.request(method="GET", url=url, **kwargs)
     resp.raise_for_status()
+    js_resp = await resp.json()
+    return js_resp
 
-    save_data(resp.json(), 1)
-    return resp
 
-def make_csv(resp):
-    dataset = resp.json()
-    all_specific_data = []
-    useradded = set()
+async def get_specific_data(
+    url: str, file: IO, session: aiohttp.ClientSession, **kwargs
+) -> dict:
+    specific_data = {}
 
     def get_sublist(sequence):
         attachments = []
@@ -94,134 +93,218 @@ def make_csv(resp):
         for elem in sequence:
             attachments.append(elem)
         if len(attachments) != 1:
-            return {'filename': 'not found',
-                    'display_name': 'not found',
-                    'url': 'not found'
-                    }
+            return {
+                "filename": "not found",
+                "display_name": "not found",
+                "url": "not found",
+            }
             # raise IndexError('Multiple attachments not handled!')
         return attachments[0]
 
-    for data in dataset:
-        # Since api returns the newest file submitted first
-        # We only include the first instance of user
-        userid = data['user_id']
-        if userid in useradded:
-            continue
-        useradded.add(userid)
+    try:
+        js_resp = await fetch_endpoint(url=url, session=session, **kwargs)
+    except (
+        aiohttp.ClientError,
+        aiohttp.http_exceptions.HttpProcessingError,
+    ) as er:
+        print(
+            f'aiohttp exception for {url} {getattr(er, "status", None)}\
+                                          {getattr(er, "message", None)}'
+        )
+        logging.error(
+            f'aiohttp exception for {url} {getattr(er, "status", None)}\
+                                          {getattr(er, "message", None)}'
+        )
+        return specific_data
+    except Exception as e:
+        print(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
 
-        specific_data = {
-            'assignment_id': data['assignment_id'],
-            'assignment_name': data['assignment_name'],
-            'user_id': userid,
-            'user_name': data['user_name'],
-            'current_grade': data['current_grade'],
-            'current_grader': data['current_grader'],
-            'filename': get_sublist(data.get('attachments', None)).get('filename', None),
-            'display_name': get_sublist(data.get('attachments', None)).get('display_name', None),
-            'url': get_sublist(data.get('attachments', None)).get('url', None),
-        }
-        all_specific_data.append(specific_data)
-        # save_specific_data(specific_data)
+        logging.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
+        return specific_data
 
-
-    # If respond header indicates that there are more pages, 
-    # fetch all pages
-    if (n_pages := get_n_pages(resp)) > 1:
-        for n in range(2, n_pages + 1):
-
-            # For testing:
-            if n == 2:
-                break
-
-            # Since api returns the newest file submitted first
-            # We only include the first instance of user
-            userid = data['user_id']
-            if userid in useradded:
-                continue
-            useradded.add(userid)
-
-            payload['page'] = n
-            nresponse = req.get(endpoint, headers=headers, params=payload)
-            whole_data = nresponse.json()
-            save_data(data, n)
-            for data in whole_data:
-                specific_data = {
-                    'assignment_id': data['assignment_id'],
-                    'assignment_name': data['assignment_name'],
-                    'user_id': userid,
-                    'user_name': data['user_name'],
-                    'current_grade': data['current_grade'],
-                    'current_grader': data['current_grader'],
-                    'filename': get_sublist(data.get('attachments', None)).get('filename', None),
-                    'display_name': get_sublist(data.get('attachments', None)).get('display_name', None),
-                    'url': get_sublist(data.get('attachments', None)).get('url', None),
-                }
-                all_specific_data.append(specific_data)
-                # save_specific_data(specific_data)
-    save_specific_data(all_specific_data)
-
-
-def download_submissions_with_api(data):
-    '''
-    Fetch the urls and download the submission
-    Mark each submission with user_id
-    Would use SIS Id, but is not provided in endpoint
-    '''
-    with open('resp.csv') as fh:
-        csvfile = csv.DictReader(fh)
-        for key, va in csvfile:
-            print(key, va)
-
-
-def save_specific_data(data):
-    with open('resp.csv', 'a') as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(data[0]))
-        writer.writeheader()
-        for elem in data:
-            writer.writerow(elem)
-
-
-def get_n_pages(resp):
-    link = resp.headers.get('link', 0)
-    if link:
-        # Find last line
-        lines = link.split(',')
-        match = re.search('&page=[0-9]*', lines[-1])
-        # Return the number of pages
-        return int(match.group()[-2:].strip("="))
-
-
-def get_data():
-    # Check if apisresp.json is available, to spare calls to api
-    user_inp = input("Fetch from API? (y/n): ")
-    if user_inp.lower() == 'y':
-        request_api()
-        with open(RESP_FILE) as fh:
-            return json.load(fh)
     else:
-        try:
-            with open(RESP_FILE) as fh:
-                data = json.load(fh)
-                print('Fetching data stored locally')
-                return data
-        except FileNotFoundError as e:
-            print(f'{e} - {RESP_FILE} not found... Trying API!')
-            request_api()
-            with open(RESP_FILE) as fh:
-                return json.load(fh)
+        pattern = re.compile(",*\s")
+        for data in js_resp:
+            user_id = data["user_id"]
+            registered = USERS.get(user_id, None)
+            if not registered:
+                continue
+            specific_data = {
+                "group": USERS[user_id].get("group", "NoGroup"),
+                "sis_user_id": USERS[user_id]["sis_user_id"],
+                "assignment_id": data["assignment_id"],
+                "assignment_name": data["assignment_name"],
+                "user_id": user_id,
+                "user_name": pattern.sub("_", USERS[user_id]["name"]),
+                "current_grade": data["current_grade"],
+                "current_grader": data["current_grader"],
+                "filename": get_sublist(data.get("attachments", None)).get(
+                    "filename", None
+                ),
+                "display_name": get_sublist(data.get("attachments", None)).get(
+                    "display_name", None
+                ),
+                "url": get_sublist(data.get("attachments", None)).get("url", None),
+            }
+            async with aiofiles.open(file, "a") as f:
+                row = ",".join(str(value) for value in specific_data.values())
+                await f.write(row + "\n")
 
-def clear_csv():
-    if Path('resp.csv').exists():
-        Path('resp.csv').rename('old_resp.csv')
 
-def save_data(data, page):
-    with open(RESP_FILE, 'a') as fh:
-        json.dump(data, fh)
-        print(f'Saved response from API to {RESP_FILE}')
+async def write_one(file: IO, url: str, **kwargs) -> None:
+    """
+    Write the desired information from json to file.
+    """
+    resp = await get_specific_data(url=url, file=file, **kwargs)
 
-if __name__ == '__main__':
-    # get_data()
-    # clear_csv()
-    # make_csv(request_api())
-    # download_submissions_with_api()
-    run_main_loop()
+
+async def fetch_all_paginated_pages(file: IO, urls: list, **kwargs) -> None:
+    """
+    Exhaust the urls list, and write them to file
+    """
+    async with aiohttp.ClientSession(headers=headers) as session:
+        tasks = []
+        for url in urls:
+            tasks.append(write_one(file=file, url=url, session=session, **kwargs))
+        await asyncio.gather(*tasks)
+
+
+async def fetch_sections():
+    # head = req.head(sections_endpoint, headers=headers)
+    # pages = get_n_pages(head)
+    # if pages > 1:
+    #     # Endpoint as is today returns no pagination, with all users
+    #     # as a list of dicts in sections.
+    #     raise NotImplementedError('Sections API have changed, returns paginations\
+    #                                 which is not implemented in your version.')
+    async with aiohttp.ClientSession(headers=headers) as session:
+        resp = await fetch_endpoint(sections_endpoint, session=session)
+
+    users = {}
+    # Make a dict of users so we can lookup when making lookups for users
+    for group in resp:
+        group_nr = group.get("sis_section_id", None)
+        # Groupnr/ is a section_id in this format:
+        # YEARV-COURSECODE-N-N-N
+        # Where the last integer reflects the visible group number
+        # Hence the slice in assignment below
+        if not group_nr:
+            # skip groups that are not member of sections
+            continue
+        if "students" not in group:  # This may be unnecessary
+            continue
+        for user in group["students"]:
+            user_id = user.get("id", None)
+            users[user_id] = {
+                "sis_user_id": user.get("sis_user_id", None),
+                "name": user.get("sortable_name", None),
+                "group": group_nr[-1],
+            }
+    return users
+
+
+async def update_users():
+    global USERS
+    # Yeah, uses global here
+    USERS = await fetch_sections()
+
+
+async def download_one(info: dict, session: aiohttp.ClientSession, **kwargs) -> None:
+    if info["url"] is None:
+        print(f"URL not found {info.items()}")
+    filename = "_".join(value for value in list(info.values())[:-1]) + ".py"
+
+    # This could be setup before ?
+    assignment_path = Path(api_submission_folder) / Path(info["ass_name"])
+    if not assignment_path.exists():
+        assignment_path.mkdir()
+    group_path = assignment_path.joinpath(Path(info["group"]))
+    if not group_path.exists():
+        group_path.mkdir()
+
+    if Path(Path(group_path) / Path(filename)).exists():
+        # print(f'{filename} already exists, skipping {info["url"]}')
+        return
+
+    # Download
+    # print(f"Downloading url {info['url']}")
+    try:
+        resp = await session.request(method="GET", url=info["url"], **kwargs)
+    except (
+        aiohttp.ClientError,
+        aiohttp.http_exceptions.HttpProcessingError,
+    ) as er:
+        print(
+            f'aiohttp exception for {info["url"]} {getattr(er, "status", None)}\
+                                          {getattr(er, "message", None)}'
+        )
+        logging.error(
+            f'aiohttp exception for {info["url"]} {getattr(er, "status", None)}\
+                                          {getattr(er, "message", None)}'
+        )
+    except Exception as e:
+        print(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
+
+        logging.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
+    else:
+        resp.raise_for_status()
+        to_file = await resp.read()
+        async with aiofiles.open(Path(group_path) / Path(filename), "wb") as f:
+            await f.write(to_file)
+
+
+async def fetch_submissions(fileinfo: list, **kwargs):
+    async with aiohttp.ClientSession(headers=headers) as session:
+        tasks = []
+        for info in fileinfo:
+            tasks.append(download_one(info=info, session=session, **kwargs))
+        await asyncio.gather(*tasks)
+
+
+def make_fileinfo_from_csv(file: IO) -> list:
+    all_submissions = []
+    with open(file) as f:
+        for line in f.readlines():
+            line = line.strip().split(",")
+            fileinfo = {
+                "group": line[0],
+                "sis_id": line[1],
+                "ass_id": line[2],
+                "ass_name": line[3].replace(" ", "_"),
+                "username": line[5],
+                "url": line[-1],
+            }
+            if fileinfo["url"] is None:
+                # No submission
+                continue
+            all_submissions.append(fileinfo)
+    all_submissions = sorted(all_submissions, key=lambda elem: elem["group"])
+    return all_submissions
+
+
+def get_cache():
+    csvfile = Path("async_assignment.csv")
+    if csvfile.exists():
+        csvfile.rename("async_assignment.csv.bak")
+    return csvfile
+
+
+def build_assignments():
+    head = req.head(gradebook_endpoint, headers=headers)
+
+    # Make the urls list:
+    pages = get_n_pages(head)
+    urls = make_urls(head, pages)
+
+    csvfile = get_cache()
+
+    asyncio.run(update_users())
+    asyncio.run(fetch_all_paginated_pages(file=csvfile, urls=urls))
+    if not Path(api_submission_folder).exists():
+        Path(api_submission_folder).mkdir()
+    all_submissions = make_fileinfo_from_csv(csvfile)
+    asyncio.run(fetch_submissions(all_submissions))
+
+
+if __name__ == "__main__":
+    build_assignments()
