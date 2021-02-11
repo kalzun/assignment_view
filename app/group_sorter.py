@@ -222,7 +222,6 @@ def save_stats_of_groups():
 def get_stats():
     with open('semester.json') as fh:
         sem = json.load(fh)
-        print(sem)
         return sem
 
 def get_newest_file(folder: str = 'zips', suffix: str = '.zip'):

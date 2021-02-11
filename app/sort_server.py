@@ -19,6 +19,7 @@ from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission
 from dotenv import load_dotenv
 from app.tasks import get_assignments, get_pdf
 import time
+from .canvas_api import build_assignments
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
@@ -117,6 +118,12 @@ def open_pdf(filename):
         'pdfs',
         filename + '.pdf',
     )
+
+@app.route("/update/")
+def update_from_api():
+    print("Updating...")
+    build_assignments()
+    return redirect("/")
 
 
 def get_filename_of_index(index, filepath):
