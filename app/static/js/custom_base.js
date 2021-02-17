@@ -73,15 +73,21 @@ function toggleSuccessInfo(elemid){
   ); 
 }
 
+function makeKeyForLocalStorage(){
+    let code = copyStudentcode(false);
+    return group_n + assignment_name + code;
+}
+
 function tempStoreFeedback() {
     let tmpFeed = feedback.getValue()
-    // console.log(tmpFeed);
-    localStorage.setItem(copyStudentcode(false), tmpFeed);
+    localStorage.setItem(makeKeyForLocalStorage(), tmpFeed);
 }
 
 function loadTempStoredFeedback() {
     // let feedback = document.getElementById("feedback-field");
-    rv = localStorage.getItem(copyStudentcode(false));
+    rv = localStorage.getItem(makeKeyForLocalStorage());
+    console.log(assignment_name);
+    console.log(group_n);
     if (rv)
         feedback.setValue(rv);
 }
@@ -98,7 +104,5 @@ function activateModal() {
         modal.classList.remove("is-active");
     });
 }
-
-
 
 

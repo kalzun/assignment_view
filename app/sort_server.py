@@ -70,7 +70,10 @@ def get_folders(folder="", group=0):
         )
     except ValueError:
         folders = sorted([fo.name for fo in theme_dir.iterdir() if fo.is_dir()])
-    files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()])
+    # If files; sort on lastname.
+    # This will need fix if we change the saving pattern of filename
+    files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()],
+                   key=lambda line: line.split('_')[5])
     return render_template(
         "filebrowser.html",
         context={
@@ -123,11 +126,27 @@ def open_pdf(filename):
 def update_from_api():
     print("Updating...")
     build_assignments()
-    return redirect("/")
+    return "Updated"
+
+@app.route("/clicked")
+def test_clicked():
+    print("Test clicked...")
+    time.sleep(2)
+    return "Done"
+
+@app.route("/test_job")
+def test_jobs():
+    print("Test jobs...")
+    time.sleep(5)
+    return "Works"
+
 
 
 def get_filename_of_index(index, filepath):
-    directory = sorted(filepath.parent.iterdir())
+    # TODO
+    # Fix filename-saving, so we can avoid sorting here......
+    directory = sorted(filepath.parent.iterdir(),
+                        key=lambda filename: filename.name.split('_')[5])
     if index is not None and index < len(directory):
         return directory[index].name
     # for i, filename in enumerate(sorted(filepath.parent.iterdir())):
@@ -136,7 +155,12 @@ def get_filename_of_index(index, filepath):
 
 
 def get_index_of_neighbour_submissions(filepath):
-    directory = sorted(filepath.parent.iterdir())
+    # Sort on lastname
+    # This will need fix if we change the saving pattern of filename
+    # TODO
+    # Fix filename-saving, so we can avoid sorting here......
+    directory = sorted(filepath.parent.iterdir(),
+                       key=lambda filename: filename.name.split('_')[5])
     for i, filename in enumerate(directory):
         if filename.name == filepath.name:
             if i > 0 and i < len(directory):

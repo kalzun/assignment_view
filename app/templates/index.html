@@ -6,10 +6,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>A little app of calm</title>
-     <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
+    <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
+    <script src="https://unpkg.com/htmx.org@1.2.0"></script>
   </head>
 
   <body>
+
+
     <section class="container">
       <div class="columns is-multiline">
         <div class="column is-8 is-offset-2 register">
@@ -27,10 +30,15 @@
                 <br />
                 <small><em>This is a work in progress...</em></small>
               </form>
-              <form action="/update" method="get">
-                <button type="submit" class="button is-block is-primary is-fullwidth is-small">Update from API</button>
+
+                <button class="button is-block is-primary is-fullwidth is-small" hx-get="/update/" hx-indicator="#fetch_progressing" hx-swap="outerHTML">
+                    Update from API
+                </button>
+                <div style="background-color:#fff">
+                    <img id="fetch_progressing" class="htmx-indicator" src="img/spinners/puff.svg" />
+                </div>
                 <br />
-              </form>
+
             </div>
           </div>
         </div>
@@ -148,4 +156,3 @@
   </style>
 
 </html>
-o
