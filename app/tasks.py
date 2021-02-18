@@ -85,7 +85,7 @@ def rename_files():
     # Rename files to remove spaces / replace spaces with _
     # sub_pattern = re.compile('(Tema|Oblig|Hoved).*\.pdf$')
     [
-        f.rename(Path(PDF_FOLDER) / f.name.replace("innlevering ", "oppgave_"))
+        f.rename(Path(PDF_FOLDER) / f.name.replace("innlevering", "oppgave"))
         for f in Path(PDF_FOLDER).iterdir()
         if f.suffix == ".pdf"
     ]
@@ -134,6 +134,8 @@ def get_assignments():
 
 
 def process_files():
+    fetch_files_externally()
+    rename_files()
     save_to_file()
 
 

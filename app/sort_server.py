@@ -17,7 +17,7 @@ from pathlib import Path
 from time import ctime
 from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name, get_stats
 from dotenv import load_dotenv
-from app.tasks import get_assignments, get_pdf, fetch_files_externally
+from app.tasks import get_assignments, get_pdf, process_files
 import time
 from .canvas_api import build_assignments
 import logging
@@ -144,7 +144,7 @@ def open_pdf(filename):
 def update_from_api():
     print("Updating...")
     build_assignments()
-    fetch_files_externally()
+    process_files()
     return "Updated submissions!"
 
 
