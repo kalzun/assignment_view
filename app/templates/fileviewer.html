@@ -63,6 +63,7 @@
 
 <!-- Modal for tasks -->
 <button id="task" class="button is-primary is-light" onclick="activateModal()">Task description</button>
+
 <div id="task-modal" class="modal">
   <div class="modal-background"></div>
   <div class="modal-card">
@@ -86,6 +87,11 @@
     <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
     <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
   </div>
+
+  <div class="level-right">
+    <button id="find_input" class="button is-primary is-light">Test_button</button>
+  </div>
+
   <div class="level-right">
     <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
   </div>
@@ -94,13 +100,13 @@
 <section class="section">
     <div class="container">
         <div class="columns">
-            <div class="column">
+            <div id="parent-to-ace" class="column is-four-fifths">
                 <code class="python" id="submissioncode">{{ context }}</code>
                 {% else %}
                 <h1>Could not find file</h1>
                 {% endif %}
             </div>
-            <div class="column">
+            <div id="parent-to-ace" class="column">
                 <div id="feedback-field">Feedback to {{ studentcode }}:</div>
             </div>
         </div>
@@ -123,6 +129,7 @@
         printMargin: false,
         showGutter: false,
         minLines: 1,
+        wrap: true,
     });
     feedback.session.setMode("ace/mode/markdown");
     var editor = ace.edit("submissioncode");

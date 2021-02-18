@@ -40,7 +40,7 @@ function copyStudentcode(show = true) {
       document.execCommand("copy");
 
       /* Alert the copied text */
-      <!-- alert("Copied the text: " + copyText.value); -->
+      // alert("Copied the text: " + copyText.value);
       toggleSuccessInfo("info-success-copy-code");
   }
   else {

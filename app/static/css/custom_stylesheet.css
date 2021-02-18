@@ -35,10 +35,18 @@ tbody:nth-child(2n) {
   display: inline-block;
 }
 
+#parent-to-ace {
+    height: 600px;
+    display:inline-block;
+    position:relative;
+}
+
 #submissioncode {
     position: absolute;
-    width: 50%;
-    height: 600px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
 }
 
 #result-code-ran {
@@ -47,7 +55,9 @@ tbody:nth-child(2n) {
 
 #feedback-field {
     position: absolute;
-    width: 50%;
-    height: 600px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
 }
 
