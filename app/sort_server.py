@@ -17,9 +17,10 @@ from pathlib import Path
 from time import ctime
 from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name, get_stats
 from dotenv import load_dotenv
-from app.tasks import get_assignments, get_pdf
+from app.tasks import get_assignments, get_pdf, fetch_files_externally
 import time
 from .canvas_api import build_assignments
+import logging
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
@@ -35,10 +36,17 @@ app = Flask(
     template_folder="templates",
 )
 
-
 app.config.from_object(__name__)
 
+# Reduce logging from werkzeug
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+
+
 SUBMISSION_FOLDER = 'api_submissions'
+# When showing files in folders, only these files will be shown:
+ALLOWED_SUFFIX = ['.py']
+
 
 ASSIGNMENTS = get_assignments()
 
@@ -60,6 +68,8 @@ def index():
 @app.route(f"/{SUBMISSION_FOLDER}/<folder>/")
 @app.route(f"/{SUBMISSION_FOLDER}/<folder>/<int:group>/")
 def get_folders(folder="", group=0):
+    t1 = time.perf_counter()
+
     submissions_dir = Path("api_submissions")
     theme_dir = submissions_dir.joinpath(Path(folder))
     if group != 0:
@@ -72,8 +82,16 @@ def get_folders(folder="", group=0):
         folders = sorted([fo.name for fo in theme_dir.iterdir() if fo.is_dir()])
     # If files; sort on lastname.
     # This will need fix if we change the saving pattern of filename
-    files = sorted([f.name for f in theme_dir.iterdir() if f.is_file()],
-                   key=lambda line: line.split('_')[5])
+    try:
+        files = sorted([f.name for f in theme_dir.iterdir() if f.is_file() and f.suffix in ALLOWED_SUFFIX],
+                       key=lambda line: line.split('_')[5])
+    except IndexError as e:
+        # If line.split fails - Will also fail if we expand ALLOWED_suffix
+        # without fixing the above sort
+        logger.exception(e)
+        files = []
+
+    log_time_used('get_folders', time.perf_counter() - t1)
     return render_template(
         "filebrowser.html",
         context={
@@ -126,32 +144,17 @@ def open_pdf(filename):
 def update_from_api():
     print("Updating...")
     build_assignments()
-    return "Updated"
-
-@app.route("/clicked")
-def test_clicked():
-    print("Test clicked...")
-    time.sleep(2)
-    return "Done"
-
-@app.route("/test_job")
-def test_jobs():
-    print("Test jobs...")
-    time.sleep(5)
-    return "Works"
-
+    fetch_files_externally()
+    return "Updated submissions!"
 
 
 def get_filename_of_index(index, filepath):
     # TODO
     # Fix filename-saving, so we can avoid sorting here......
-    directory = sorted(filepath.parent.iterdir(),
+    directory = sorted([file for file in filepath.parent.iterdir() if file.suffix in ALLOWED_SUFFIX],
                         key=lambda filename: filename.name.split('_')[5])
     if index is not None and index < len(directory):
         return directory[index].name
-    # for i, filename in enumerate(sorted(filepath.parent.iterdir())):
-    #     if i == index
-    #         return i
 
 
 def get_index_of_neighbour_submissions(filepath):
@@ -159,7 +162,7 @@ def get_index_of_neighbour_submissions(filepath):
     # This will need fix if we change the saving pattern of filename
     # TODO
     # Fix filename-saving, so we can avoid sorting here......
-    directory = sorted(filepath.parent.iterdir(),
+    directory = sorted([file for file in filepath.parent.iterdir() if file.suffix in ALLOWED_SUFFIX],
                        key=lambda filename: filename.name.split('_')[5])
     for i, filename in enumerate(directory):
         if filename.name == filepath.name:
@@ -220,3 +223,8 @@ def get_studentcode_from_filename(filename):
             return elem
     else:
         return filename[: filename.find("_")]
+
+
+def log_time_used(operation: str, spent: float):
+    logger.debug(f'{operation} - Time spent: [{spent}] seconds.)')
+

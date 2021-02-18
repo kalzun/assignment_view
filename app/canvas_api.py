@@ -12,16 +12,16 @@ import re
 import requests as req
 import sys
 
-# Logging setup
-LOGFOLDER = Path("logs")
-LOGFILENAME = "group_sorter.log"
-logging.basicConfig(
-    filename=LOGFOLDER / LOGFILENAME,
-    format="%(levelname)s:%(asctime)s - %(message)s",
-    level=logging.DEBUG,
-)
-logging.info("Started")
+# # Logging setup
+# LOGFOLDER = Path("logs")
+# LOGFILENAME = "group_sorter.log"
+# logging.basicConfig(
+#     filename=LOGFOLDER / LOGFILENAME,
+#     format="%(levelname)s:%(asctime)s - %(message)s",
+#     level=logging.DEBUG,
+# )
 
+logger = logging.getLogger(__name__)
 
 # Store the account info in a file named:
 env_name = ".env_secret"
@@ -115,7 +115,7 @@ async def get_specific_data(
             f'aiohttp exception for {url} {getattr(er, "status", None)}\
                                           {getattr(er, "message", None)}'
         )
-        logging.error(
+        logger.error(
             f'aiohttp exception for {url} {getattr(er, "status", None)}\
                                           {getattr(er, "message", None)}'
         )
@@ -123,7 +123,7 @@ async def get_specific_data(
     except Exception as e:
         print(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
 
-        logging.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
+        logger.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
         return specific_data
 
     else:
@@ -241,14 +241,14 @@ async def download_one(info: dict, session: aiohttp.ClientSession, **kwargs) -> 
             f'aiohttp exception for {info["url"]} {getattr(er, "status", None)}\
                                           {getattr(er, "message", None)}'
         )
-        logging.error(
+        logger.error(
             f'aiohttp exception for {info["url"]} {getattr(er, "status", None)}\
                                           {getattr(er, "message", None)}'
         )
     except Exception as e:
         print(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
 
-        logging.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
+        logger.exception(f'Non-aiohttp exception occured {getattr(e, "__dict__", {})}')
     else:
         resp.raise_for_status()
         to_file = await resp.read()

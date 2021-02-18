@@ -35,10 +35,15 @@ tbody:nth-child(2n) {
   display: inline-block;
 }
 
+.custom-ace-container {
+}
+
+
 #parent-to-ace {
-    height: 600px;
     display:inline-block;
     position:relative;
+    height: 600px;
+    width: 60%;
 }
 
 #submissioncode {

@@ -98,15 +98,15 @@
 </nav>
 
 <section class="section">
-    <div class="container">
-        <div class="columns">
-            <div id="parent-to-ace" class="column is-four-fifths">
+    <div class="container custom-ace-container">
+        <div class="columns ">
+            <div id="parent-to-ace" class="column is-three-fifths is-mobile">
                 <code class="python" id="submissioncode">{{ context }}</code>
                 {% else %}
                 <h1>Could not find file</h1>
                 {% endif %}
             </div>
-            <div id="parent-to-ace" class="column">
+            <div id="parent-to-ace" class="column is-mobile">
                 <div id="feedback-field">Feedback to {{ studentcode }}:</div>
             </div>
         </div>

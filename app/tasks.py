@@ -9,12 +9,16 @@ import requests as req
 import logging
 from dotenv import load_dotenv
 import os
+import time
 
 # Reduce a heavy logging pdfminer...
-logging.getLogger('pdfminer').setLevel(logging.WARNING)
+logging.getLogger("pdfminer").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 PDF_FOLDER = "pdfs"
-TASKS_FILE = 'tasks.json'
+TASKS_FILE = "tasks.json"
 
 # Store the account info in a file named:
 env_name = ".env_secret"
@@ -27,6 +31,10 @@ TOKEN = os.getenv("TOKEN")
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
+
+def test1():
+    logger.debug("Wow")
+
 def get_pdfs():
     # Fetch all pdfs in folder
     if not Path(PDF_FOLDER).exists():
@@ -34,34 +42,42 @@ def get_pdfs():
     pdfs = [f.name for f in Path(PDF_FOLDER).iterdir() if f.suffix == ".pdf"]
     return pdfs
 
-def fetch_files_externally(url, assignment_name='Temainnlevering'):
-    '''
+
+def fetch_files_externally(url='', assignment_name="innlevering"):
+    """
     Downlad pdfs (assignment instructions) to local folder.
-    assignment_name is the name of the files the lecture sets it as.
-    '''
+    assignment_name is part of the name of the files the lecture sets it as.
+    """
     # TODO: API JOB
+    # Make async?
 
     course_id = "26755"
-    url = f'http://mitt.uib.no/api/v1/courses/{course_id}/files?search_term={assignment_name}'
-    pattern = re.compile('(Tema.*|Oblig.*|Hoved.*)+.*[0-9]+\.pdf$')
-    numbers_pat = re.compile('\s[0-9]+')
+    url = f"http://mitt.uib.no/api/v1/courses/{course_id}/files?search_term={assignment_name}"
+    pattern = re.compile("(Tema.*|Oblig.*|Hoved.*)+.*[0-9]+\.pdf$")
+    numbers_pat = re.compile("[0-9]+")
 
     resp = req.get(url, headers=headers)
 
     resp.raise_for_status()
 
     for d in resp.json():
-        filename = d['display_name']
-        # TODO Regex sub for correct name
-        # number = re.search(numbers_pat, filename)
+        filename = d["display_name"]
         if pattern.search(filename):
-            # filename = numbers_pat.sub(f'_{number.group()}', filename)
+            filename = filename.replace(" ", "")
+            n_index = re.search(numbers_pat, filename).start()
+            filename = filename[:n_index] + "_" + filename[n_index:]
 
             # Download
-            fileresp = req.get(d['url'], headers=headers)
+            t1 = time.perf_counter()
+            fileresp = req.get(d["url"], headers=headers)
             fileresp.raise_for_status()
-            with open(Path(PDF_FOLDER) / Path(filename), 'wb') as fout:
+            with open(Path(PDF_FOLDER) / Path(filename), "wb") as fout:
                 fout.write(fileresp.content)
+
+            log_time_used(f"Downloading {filename} from {d['url']}", time.perf_counter() - t1)
+
+def log_time_used(operation: str, spent: float):
+    logger.debug(f'{operation} - Time spent: [{spent}] seconds.)')
 
 def rename_files():
     # Folders are made out of the Temaoppgave_1-structure, while
@@ -70,13 +86,14 @@ def rename_files():
     # sub_pattern = re.compile('(Tema|Oblig|Hoved).*\.pdf$')
     [
         f.rename(Path(PDF_FOLDER) / f.name.replace("innlevering ", "oppgave_"))
-        # f.rename(Path(PDF_FOLDER) / sub_pattern.sub('f.name.replace("innlevering ", "oppgave_"))
         for f in Path(PDF_FOLDER).iterdir()
         if f.suffix == ".pdf"
     ]
 
+
 def get_pdf(filename):
-    return (Path(PDF_FOLDER) / Path(filename + '.pdf'))
+    return Path(PDF_FOLDER) / Path(filename + ".pdf")
+
 
 def pdf_to_text(html=False):
     # Returns a dictionary where keyword is the file,
@@ -88,11 +105,11 @@ def pdf_to_text(html=False):
         pdf = pdf.strip(".pdf")
         if html:
             output_string = StringIO()
-            with open(Path(PDF_FOLDER) / Path(pdf + ".pdf"), 'rb') as fin:
+            with open(Path(PDF_FOLDER) / Path(pdf + ".pdf"), "rb") as fin:
                 extract_text_to_fp(
                     fin,
                     output_string,
-                    output_type='html',
+                    output_type="html",
                     codec=None,
                 )
                 all_tasks[pdf] = output_string.getvalue()
@@ -106,7 +123,7 @@ def pdf_to_text(html=False):
 
 
 def save_to_file():
-    with open(TASKS_FILE, 'w') as f:
+    with open(TASKS_FILE, "w") as f:
         json.dump(pdf_to_text(), f)
 
 
@@ -115,12 +132,15 @@ def get_assignments():
     with open(TASKS_FILE) as f:
         return json.load(f)
 
+
 def process_files():
     save_to_file()
+
 
 def test_get_pdfs():
     assert get_pdfs() == ["Temainnlevering 1.pdf"]
 
+
 def test_get_assignments():
     process_files()
-    assert get_assignments() == {'Temainnlevering_1': []}
+    assert get_assignments() == {"Temainnlevering_1": []}
