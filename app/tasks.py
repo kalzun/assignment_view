@@ -10,6 +10,7 @@ import logging
 from dotenv import load_dotenv
 import os
 import time
+from .utils.decorators import timeit
 
 # Reduce a heavy logging pdfminer...
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
@@ -31,9 +32,6 @@ TOKEN = os.getenv("TOKEN")
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
-
-def test1():
-    logger.debug("Wow")
 
 def get_pdfs():
     # Fetch all pdfs in folder
@@ -128,7 +126,6 @@ def save_to_file():
 
 
 def get_assignments():
-    save_to_file()
     with open(TASKS_FILE) as f:
         return json.load(f)
 

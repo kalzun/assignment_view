@@ -15,7 +15,9 @@ from textwrap import TextWrapper
 import json
 from pathlib import Path
 from time import ctime
-from .group_sorter import Groups, CONFIG, LOGFOLDER, LOGFILENAME, get_submission_name, get_stats
+from .group_sorter import get_submission_name, get_stats
+from .settings import CONFIG, LOGFOLDER, LOGFILENAME
+from .utils.decorators import timeit
 from dotenv import load_dotenv
 from app.tasks import get_assignments, get_pdf, process_files
 import time
@@ -29,6 +31,7 @@ load_dotenv(dotenv_path)
 # export FLASK_APP=sort_server.py
 # flask run
 
+# Specific flask settings:
 app = Flask(
     __name__,
     static_url_path="",
@@ -38,26 +41,19 @@ app = Flask(
 
 app.config.from_object(__name__)
 
-# Reduce logging from werkzeug
-logging.getLogger("werkzeug").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-
-SUBMISSION_FOLDER = 'api_submissions'
-# When showing files in folders, only these files will be shown:
-ALLOWED_SUFFIX = ['.py']
-
-
-ASSIGNMENTS = get_assignments()
+# To change these settings in settings.py -> CONFIG
+SUBMISSION_FOLDER = CONFIG["SUBMISSION_FOLDER"]
+ALLOWED_SUFFIX = CONFIG["ALLOWED_SUFFIX"]
 
 @app.route("/favicon.ico")
 def favicon():
     return send_from_directory(
-        os.path.join(app.root_path, "static"),
+        os.path.join(app.root_path, "static/img"),
         "favicon.ico",
         mimetype="image/vnd.microsoft.icon",
     )
-
 
 @app.route("/")
 def index():
@@ -67,10 +63,9 @@ def index():
 @app.route(f"/{SUBMISSION_FOLDER}/")
 @app.route(f"/{SUBMISSION_FOLDER}/<folder>/")
 @app.route(f"/{SUBMISSION_FOLDER}/<folder>/<int:group>/")
+@timeit
 def get_folders(folder="", group=0):
-    t1 = time.perf_counter()
-
-    submissions_dir = Path("api_submissions")
+    submissions_dir = Path(SUBMISSION_FOLDER)
     theme_dir = submissions_dir.joinpath(Path(folder))
     if group != 0:
         theme_dir = theme_dir.joinpath(str(group))
@@ -91,7 +86,6 @@ def get_folders(folder="", group=0):
         logger.exception(e)
         files = []
 
-    log_time_used('get_folders', time.perf_counter() - t1)
     return render_template(
         "filebrowser.html",
         context={
@@ -107,7 +101,7 @@ def get_folders(folder="", group=0):
 
 @app.route(f"/{SUBMISSION_FOLDER}/<folder>/<int:group>/<filename>")
 def get_specific_file(folder, group, filename):
-    submissions_dir = Path("api_submissions")
+    submissions_dir = Path(SUBMISSION_FOLDER)
     theme_dir = submissions_dir.joinpath(Path(folder))
     group_dir = theme_dir.joinpath(str(group))
     filepath = group_dir.joinpath(filename)
@@ -117,6 +111,7 @@ def get_specific_file(folder, group, filename):
         get_filename_of_index(prev_index, filepath),
         get_filename_of_index(next_index, filepath),
     )
+
 
     with open(filepath, "r", encoding="utf-8") as f:
         content = "".join(f.readlines())
@@ -128,7 +123,7 @@ def get_specific_file(folder, group, filename):
             prev_submission=prev_submission,
             next_submission=next_submission,
             studentcode=get_studentcode_from_filename(filename),
-            tasks=Markup(ASSIGNMENTS.get(folder, f'Please copy {folder}.pdf to pdf-folder')),
+            tasks=Markup(get_assignments().get(folder, f'Please copy {folder}.pdf to pdf-folder')),
             task_pdf=folder,
         )
 
@@ -207,6 +202,7 @@ def get_file_update_info(filepath):
     return ctime(Path(filepath).stat().st_mtime)
 
 
+@timeit
 def get_studentcode_from_filename(filename):
     """
     Studentcode consists of three letters and three int
@@ -223,8 +219,4 @@ def get_studentcode_from_filename(filename):
             return elem
     else:
         return filename[: filename.find("_")]
-
-
-def log_time_used(operation: str, spent: float):
-    logger.debug(f'{operation} - Time spent: [{spent}] seconds.)')
 

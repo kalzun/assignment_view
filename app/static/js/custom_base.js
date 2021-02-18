@@ -86,8 +86,6 @@ function tempStoreFeedback() {
 function loadTempStoredFeedback() {
     // let feedback = document.getElementById("feedback-field");
     rv = localStorage.getItem(makeKeyForLocalStorage());
-    console.log(assignment_name);
-    console.log(group_n);
     if (rv)
         feedback.setValue(rv);
 }
