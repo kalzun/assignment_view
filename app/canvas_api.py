@@ -12,6 +12,7 @@ import re
 import requests as req
 import sys
 import sqlite3
+import aiosqlite
 from contextlib import closing
 import time
 # from .utils.decorators import timeit
@@ -49,6 +50,7 @@ api_submission_folder = "api_submissions"
 
 DB = "sqlite.db"
 USERS = {}
+URLS = set()
 
 stats = {
     "download_one": 0,
@@ -97,8 +99,15 @@ def create_tables():
                 """CREATE TABLE info
                 (latest_fetch INTEGER)"""
             )
+            cursor.execute("INSERT INTO info VALUES (?)", 0)
 
             conn.commit()
+
+def test_select():
+    with closing(sqlite3.connect(DB)) as conn:
+        with closing(conn.cursor()) as cursor:
+            result = cursor.execute("SELECT * FROM info").fetchone()
+            print(result[0])
 
 
 def test_inserts():
@@ -164,17 +173,19 @@ def make_urls(head: dict, max_n_pages: int) -> list:
 
 
 async def fetch_endpoint(url: str, return_json: bool, session: aiohttp.ClientSession, **kwargs) -> json:
-    # print(f"Fetching url {url}")
+    logger.debug(f"Fetching url {url}")
     resp = await session.request(method="GET", url=url, **kwargs)
     resp.raise_for_status()
+    logger.debug(f"Fetched url {url}")
     if return_json:
         return await resp.json()
-    return resp
+    return await resp.text()
 
 
 async def get_specific_data(
-    url: str, session: aiohttp.ClientSession, **kwargs
+    url: str, session: aiohttp.ClientSession, conn: aiosqlite.Connection, **kwargs
 ) -> dict:
+    logger.debug("Should get_specific_data")
     specific_data = {}
 
     def get_sublist(sequence):
@@ -193,6 +204,7 @@ async def get_specific_data(
         return attachments[0]
 
     try:
+        logger.debug(f"Awaiting jsresp from {url}")
         js_resp = await fetch_endpoint(url=url, return_json=True, session=session, **kwargs)
     except (
         aiohttp.ClientError,
@@ -209,89 +221,95 @@ async def get_specific_data(
 
     else:
         pattern = re.compile(",*\s")
-        with closing(sqlite3.connect(DB)) as conn:
-            with closing(conn.cursor()) as cursor:
-                all_rows = []
+        all_rows = []
 
-                for data in js_resp:
-                    # We do not want to download a submissions that is 
-                    # previously fetched:
-                    submitted_at = time.mktime(time.strptime(data["submitted_at"], '%Y-%m-%dT%H:%M:%SZ'))
-                    if stats['last_update_time'] > submitted_at:
-                        logger.debug(f"Skipping already registered {data['assignment_id']} - {data['user_id']}")
-                        continue
-                    try:
-                        grader_id = data.get("grader_id", 0)
-                        # Grader_id is null from API, str(None) in python
-                        if grader_id == 'None' or grader_id is None:
-                            grader_id = 0
-                        grader_id = int(grader_id)
-                        assignment_id = int(data.get("assignment_id", 0))
-                        user_id = int(data.get("user_id", 0))
-                    except TypeError as er:
-                        logger.debug(f"""{er} while converting
-                                        {data['grader_id']}
-                                        {type(data['grader_id'])}
-                                        {data['assignment_id']}
-                                        {type(data['assignment_id'])}
-                                        {data['user_id']}
-                                        {type(data['user_id'])}""")
-                        grader_id = 0
-                        assignment_id = 0
-                        user_id = 0
+        for data in js_resp:
+            # We do not want to download a submissions that is 
+            # previously fetched:
+            try:
+                submitted_at = time.mktime(time.strptime(data["submitted_at"], '%Y-%m-%dT%H:%M:%SZ'))
+            except TypeError as er:
+                logger.error(f"Cannot parse submitted_at, probably because it is not submitted yet")
+                logger.error(f"submitted_at is: {data['submitted_at']}")
+                submitted_at = 0
+            if stats['last_update_time'] > submitted_at:
+                logger.debug(f"Skipping {data['assignment_id']} - {data['user_id']}")
+                stats['skipped'] += 1
+                continue
+            try:
+                grader_id = data.get("grader_id", 0)
+                # Grader_id is null from API, str(None) in python
+                if grader_id == 'None' or grader_id is None:
+                    grader_id = 0
+                grader_id = int(grader_id)
+                assignment_id = int(data.get("assignment_id", 0))
+                user_id = int(data.get("user_id", 0))
+            except TypeError as er:
+                logger.debug(f"""{er} while converting
+                                {data['grader_id']}
+                                {type(data['grader_id'])}
+                                {data['assignment_id']}
+                                {type(data['assignment_id'])}
+                                {data['user_id']}
+                                {type(data['user_id'])}""")
+                grader_id = 0
+                assignment_id = 0
+                user_id = 0
 
-                    registered = USERS.get(user_id, None)
-                    if not registered:
-                        continue
-                    attachment_url = get_sublist(data.get("attachments", None)).get("url", None)
-                    try:
-                        resp = await fetch_endpoint(
-                            url=attachment_url, return_json=False, session=session, **kwargs)
-                        code = await resp.text()
-                    except:
-                        code = 'No submission found'
-                    all_rows.append(
-                        (
-                            int(USERS[user_id].get("group", "NoGroup")),
-                            str(USERS[user_id]["sis_user_id"]),
-                            assignment_id,
-                            str(data["assignment_name"]),
-                            user_id,
-                            str(pattern.sub("_", USERS[user_id]["name"])),
-                            grader_id,
-                            str(data["current_grade"]),
-                            str(data["current_grader"]),
-                            str(get_sublist(data.get("attachments", None)).get(
-                                "filename", None
-                            )),
-                            str(get_sublist(data.get("attachments", None)).get(
-                                "display_name", None
-                            )),
-                            code,
-                        )
-                    )
-                try:
-                    cursor.executemany(
-                        """
-                        INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                        all_rows,
-                    )
-                    conn.commit()
-                    logger.debug(f"Writing {all_rows[:3]}(...){all_rows[-2:]} to db")
-                except sqlite3.InterfaceError as er:
-                    logger.debug(all_rows)
-                    logger.debug(f"Trying to insert but failing - {er}")
+            registered = USERS.get(user_id, None)
+            if not registered:
+                continue
+            attachment_url = get_sublist(data.get("attachments", None)).get("url", None)
+            try:
+                logger.debug(f"Awaiting response from code download from {attachment_url}")
+                text = await fetch_endpoint(
+                    url=attachment_url, return_json=False, session=session, **kwargs)
+                code = text
+            except Exception as err:
+                logger.error(f"Error during fetching code {err}")
+                logger.debug(f"Error during fetching code {err}")
+                code = 'No submission found'
+            all_rows.append(
+                (
+                    int(USERS[user_id].get("group", "NoGroup")),
+                    str(USERS[user_id]["sis_user_id"]),
+                    assignment_id,
+                    str(data["assignment_name"]),
+                    user_id,
+                    str(pattern.sub("_", USERS[user_id]["name"])),
+                    grader_id,
+                    str(data["current_grade"]),
+                    str(data["current_grader"]),
+                    str(get_sublist(data.get("attachments", None)).get(
+                        "filename", None
+                    )),
+                    str(get_sublist(data.get("attachments", None)).get(
+                        "display_name", None
+                    )),
+                    code,
+                )
+            )
 
-            # async with aiofiles.open(file, "a", encoding="utf-8", newline="") as f:
-            #     row = ",".join(str(value) for value in specific_data.values())
-            #     await f.write("\n" + row)
+        if all_rows:
+            logger.debug(f"Awaiting DB executioins of all_rows")
+            await conn.executemany(
+                """
+                INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                all_rows,
+            )
+            await conn.commit()
+            logger.debug(f"Writing rows to db")
+
+        # async with aiofiles.open(file, "a", encoding="utf-8", newline="") as f:
+        #     row = ",".join(str(value) for value in specific_data.values())
+        #     await f.write("\n" + row)
 
 
 async def write_one(url: str, **kwargs) -> None:
     """
     Write the desired information from json to file.
     """
-    resp = await get_specific_data(url=url, **kwargs)
+    return await get_specific_data(url=url, **kwargs)
 
 
 async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
@@ -299,10 +317,13 @@ async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
     Consume the urls list, and write them to file
     """
     async with aiohttp.ClientSession(headers=headers) as session:
-        tasks = []
-        for url in urls:
-            tasks.append(write_one(url=url, session=session, **kwargs))
-        await asyncio.gather(*tasks)
+        async with aiosqlite.connect(DB, timeout=30) as conn:
+            tasks = []
+            for _ in range(len(URLS)):
+                url = URLS.pop()
+                tasks.append(get_specific_data(url=url, session=session, conn=conn, **kwargs))
+            logger.debug(f"Awaiting tasks: {tasks}")
+            await asyncio.gather(*tasks)
 
 
 async def fetch_sections():
@@ -446,42 +467,53 @@ def clear_table():
         with closing(conn.cursor()) as cursor:
             cursor.execute("DELETE FROM cache")
             cursor.execute("DELETE FROM info")
+            cursor.execute("INSERT INTO info VALUES (?)", (0,))
             conn.commit()
-            logger.debug("Cleared tables of records")
+            logger.debug("Cleared tables of records, stored stdvalue(0) in info-table")
 
 
 def get_last_update_time():
     with closing(sqlite3.connect(DB)) as conn:
         with closing(conn.cursor()) as cursor:
-            stats['last_update_time'] = cursor.execute("SELECT latest_fetch FROM info").fetchone()
+            stats['last_update_time'] = cursor.execute("SELECT latest_fetch FROM info").fetchone()[0]
             conn.commit()
             logger.debug(f"Last update time: {stats['last_update_time']}.")
 
 def set_last_update_time():
     with closing(sqlite3.connect(DB)) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute("UPDATE info SET latest_fetch=?", (time.time(),))
-            conn.commit()
             logger.debug(f"Set last update time: {time.time()} <- (not prec).")
+            cursor.execute("UPDATE info set latest_fetch=?", (time.time(),))
+            conn.commit()
 
 async def main():
+    global URLS
+
+    get_last_update_time()
+
     head = req.head(gradebook_endpoint, headers=headers)
+    logger.debug(f"Headers from gradebook: {head.text}")
 
     # Make the urls list:
     pages = get_n_pages(head)
-    urls = make_urls(head, pages)
-
+    logger.debug(f"N pages from gradebook: {pages}")
+    URLS = set(make_urls(head, pages))
     # csvfile = get_cache()
     # if not Path(api_submission_folder).exists():
     #     Path(api_submission_folder).mkdir()
 
     # Fetch info about users
+    logger.debug(f"Updating USERS")
     await update_users()
-    await fetch_all_paginated_pages(urls=urls)
+    logger.debug(f"Finished updating USERS")
+    logger.debug(f"Starting fetching all submissions ")
+    await fetch_all_paginated_pages(urls=URLS)
+    logger.debug(f"Finished fetching all submissions ")
     # all_submissions = make_fileinfo_from_csv(csvfile)
     # await fetch_submissions(all_submissions)
 
     set_last_update_time()
+    get_last_update_time()
 
     print("\nStats: ")
     print(f"Users: {len(USERS)}")
