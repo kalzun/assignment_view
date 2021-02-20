@@ -139,7 +139,7 @@ def open_pdf(filename):
 def update_from_api():
     print("Updating...")
     build_assignments()
-    process_files()
+    # process_files()
     return "Updated submissions!"
 
 
@@ -202,7 +202,6 @@ def get_file_update_info(filepath):
     return ctime(Path(filepath).stat().st_mtime)
 
 
-@timeit
 def get_studentcode_from_filename(filename):
     """
     Studentcode consists of three letters and three int

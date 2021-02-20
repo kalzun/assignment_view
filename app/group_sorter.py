@@ -24,35 +24,8 @@ positions = {
     "group_info": 4,
 }
 
-with open("semester.json") as f:
-    SETTINGS = json.load(f)
-
-CONFIG = dict(
-    COURSECODE=SETTINGS["COURSECODE"], N_OF_GROUPS=int(SETTINGS["N_OF_GROUPS"])
-)
-
-# Logging setup
-LOGFOLDER = Path("logs")
-LOGFILENAME = "main.log"
-
-logging.basicConfig(
-                    filename=LOGFOLDER / LOGFILENAME,
-                    format='%(asctime)s - %(name)s - %(levelname)s: %(message)s',
-                    level=logging.DEBUG,
-)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-#Add RotateFileHandler to root logger
-rfh = logging.handlers.RotatingFileHandler('logs/main.log', backupCount=2, maxBytes=1000000)
-rfh.setFormatter(formatter)
-logging.getLogger('').addHandler(rfh)
 
 logger = logging.getLogger(__name__)
-
-logger.info("Started")
-
-LATEST_STATUS = Path("logs")
-
 
 @dataclass
 class Groups:
