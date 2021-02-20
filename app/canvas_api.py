@@ -13,6 +13,8 @@ import requests as req
 import sys
 import sqlite3
 from contextlib import closing
+import time
+# from .utils.decorators import timeit
 
 # # Logging setup
 # LOGFOLDER = Path("logs")
@@ -24,6 +26,7 @@ from contextlib import closing
 # )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Store the account info in a file named:
 env_name = ".env_secret"
@@ -52,6 +55,7 @@ stats = {
     "downloads": 0,
     "skipped": 0,
     "unique": set(),
+    "last_update_time": 0,
 }
 
 # platform specific WINDOWS:
@@ -64,7 +68,7 @@ if (
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def migrate():
+def create_tables():
     """
     Make table for db
     """
@@ -86,6 +90,12 @@ def migrate():
                 display_name TEXT,
                 code BLOB
             )"""
+            )
+
+            # Another table for meta-info about latest fetch, etc
+            cursor.execute(
+                """CREATE TABLE info
+                (latest_fetch INTEGER)"""
             )
 
             conn.commit()
@@ -116,15 +126,11 @@ def test_inserts():
                     resp.text,
                 )
             ]
-
-
-
             cursor.executemany(
                 """
                 INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
                 values,
             )
-
             rows = cursor.execute("SELECT * FROM cache").fetchall()
             print(rows)
 
@@ -167,7 +173,7 @@ async def fetch_endpoint(url: str, return_json: bool, session: aiohttp.ClientSes
 
 
 async def get_specific_data(
-    url: str, file: IO, session: aiohttp.ClientSession, **kwargs
+    url: str, session: aiohttp.ClientSession, **kwargs
 ) -> dict:
     specific_data = {}
 
@@ -205,10 +211,15 @@ async def get_specific_data(
         pattern = re.compile(",*\s")
         with closing(sqlite3.connect(DB)) as conn:
             with closing(conn.cursor()) as cursor:
-                conn.commit()
                 all_rows = []
 
                 for data in js_resp:
+                    # We do not want to download a submissions that is 
+                    # previously fetched:
+                    submitted_at = time.mktime(time.strptime(data["submitted_at"], '%Y-%m-%dT%H:%M:%SZ'))
+                    if stats['last_update_time'] > submitted_at:
+                        logger.debug(f"Skipping already registered {data['assignment_id']} - {data['user_id']}")
+                        continue
                     try:
                         grader_id = data.get("grader_id", 0)
                         # Grader_id is null from API, str(None) in python
@@ -266,6 +277,7 @@ async def get_specific_data(
                         all_rows,
                     )
                     conn.commit()
+                    logger.debug(f"Writing {all_rows[:3]}(...){all_rows[-2:]} to db")
                 except sqlite3.InterfaceError as er:
                     logger.debug(all_rows)
                     logger.debug(f"Trying to insert but failing - {er}")
@@ -275,21 +287,21 @@ async def get_specific_data(
             #     await f.write("\n" + row)
 
 
-async def write_one(file: IO, url: str, **kwargs) -> None:
+async def write_one(url: str, **kwargs) -> None:
     """
     Write the desired information from json to file.
     """
-    resp = await get_specific_data(url=url, file=file, **kwargs)
+    resp = await get_specific_data(url=url, **kwargs)
 
 
-async def fetch_all_paginated_pages(file: IO, urls: list, **kwargs) -> None:
+async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
     """
     Consume the urls list, and write them to file
     """
     async with aiohttp.ClientSession(headers=headers) as session:
         tasks = []
         for url in urls:
-            tasks.append(write_one(file=file, url=url, session=session, **kwargs))
+            tasks.append(write_one(url=url, session=session, **kwargs))
         await asyncio.gather(*tasks)
 
 
@@ -424,6 +436,33 @@ def get_cache():
         csvfile.replace("async_assignment.csv.bak")
     return csvfile
 
+# @timeit
+def clear_table():
+    """
+    Before making a solution to update values in db,
+    we just clear the db when updating from API.
+    """
+    with closing(sqlite3.connect(DB)) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("DELETE FROM cache")
+            cursor.execute("DELETE FROM info")
+            conn.commit()
+            logger.debug("Cleared tables of records")
+
+
+def get_last_update_time():
+    with closing(sqlite3.connect(DB)) as conn:
+        with closing(conn.cursor()) as cursor:
+            stats['last_update_time'] = cursor.execute("SELECT latest_fetch FROM info").fetchone()
+            conn.commit()
+            logger.debug(f"Last update time: {stats['last_update_time']}.")
+
+def set_last_update_time():
+    with closing(sqlite3.connect(DB)) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("UPDATE info SET latest_fetch=?", (time.time(),))
+            conn.commit()
+            logger.debug(f"Set last update time: {time.time()} <- (not prec).")
 
 async def main():
     head = req.head(gradebook_endpoint, headers=headers)
@@ -432,17 +471,17 @@ async def main():
     pages = get_n_pages(head)
     urls = make_urls(head, pages)
 
-    csvfile = get_cache()
-    if not Path(api_submission_folder).exists():
-        Path(api_submission_folder).mkdir()
+    # csvfile = get_cache()
+    # if not Path(api_submission_folder).exists():
+    #     Path(api_submission_folder).mkdir()
 
     # Fetch info about users
     await update_users()
-    # Get info about submisisons, users and their submission urls
-    # "Cache" this to csv
-    await fetch_all_paginated_pages(file=csvfile, urls=urls)
+    await fetch_all_paginated_pages(urls=urls)
     # all_submissions = make_fileinfo_from_csv(csvfile)
     # await fetch_submissions(all_submissions)
+
+    set_last_update_time()
 
     print("\nStats: ")
     print(f"Users: {len(USERS)}")
