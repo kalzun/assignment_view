@@ -20,7 +20,7 @@
       <div class="notification is-light">
   <nav class="level">
       <div class="level-left">
-            Student: <input class="input" type="text" type="text" value="{{studentcode}}" id="studentcode" readonly>
+            Student: <input class="input" type="text" type="text" value="{{ context.sis_user_id }}" id="studentcode" readonly>
         <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
         <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
       </div>

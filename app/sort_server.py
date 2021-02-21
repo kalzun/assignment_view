@@ -110,10 +110,22 @@ def get_submissions_by_ass(group=1, assignment_name=''):
                  COUNT(*) FROM cache WHERE group_nr = ? AND current_grade = 'complete'
             """, (group, )).fetchall()
         submissions = conn.execute(
-            """SELECT
-                 group_nr, assignment_name, sis_user_id, user_name, current_grade, filename, display_name, modified_at
-                 FROM cache WHERE group_nr=? AND assignment_name=?
-                 ORDER BY assignment_name, user_name
+            """
+                SELECT DISTINCT user_name, filename, display_name, assignment_name,
+                table1.sis_user_id,
+                table1.modified_at,
+                current_grade
+                FROM cache table1
+                INNER JOIN
+                (
+                SELECT sis_user_id, max(modified_at) MaxVal
+                FROM cache
+                WHERE group_nr = ? AND assignment_name = ?
+                GROUP BY sis_user_id
+                ) table2
+                ON table1.sis_user_id = table2.sis_user_id
+                AND table1.modified_at = table2.maxval
+                ORDER BY user_name
             """,
             (group, assignment_name),
         ).fetchall()
@@ -128,27 +140,31 @@ def get_submissions_by_ass(group=1, assignment_name=''):
 @app.route(f"/{SUBMISSION_FOLDER}/<int:group>/<assignment_name>/<filename>")
 def get_submission(group=1, assignment_name=None, filename=None):
     with sqlite3.connect(DB) as conn:
-        code = conn.execute(
+        code, sis_user_id = conn.execute(
             """SELECT
-                code FROM cache
+                code, sis_user_id FROM cache
                 WHERE group_nr = ? AND assignment_name = ? AND filename = ?
-                """, (group, assignment_name, filename)).fetchone()[0]
+                """, (group, assignment_name, filename)).fetchone()
 
         return render_template(
             'fileviewer.html', context={
                 'code': code,
+                'sis_user_id': sis_user_id,
             }
         )
 
-
-
 def attribute_submission(sequence: tuple) -> dict:
-    return {
-        'user_name': sequence[3],
-        'filename': sequence[5],
-        'display_name': sequence[6],
-        'href': sequence[2],
+    submission = {
+        'user_name': sequence[0],
+        'filename': sequence[1],
+        'display_name': sequence[2],
+        'assignment_name': sequence[3],
+        'user_id': sequence[4],
+        'modified_at': sequence[5],
+        'current_grade': sequence[6],
     }
+    return submission
+
 
 # @app.route(f"/{SUBMISSION_FOLDER}/")
 # @app.route(f"/{SUBMISSION_FOLDER}/<folder>/")
