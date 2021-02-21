@@ -65,7 +65,7 @@ function copyStudentsubmission() {
 
 function toggleSuccessInfo(elemid){
   document.getElementById(elemid).classList.toggle("invisible");
-  let promise = new Promise(function(resolve, reject) {
+  let promise = new Promise(function(resolve) {
       setTimeout(() => resolve("done"), 1000);
     });
   promise.then(
@@ -101,6 +101,14 @@ function activateModal() {
     d_btn_modal.addEventListener("click", function() {
         modal.classList.remove("is-active");
     });
+}
+
+function getCommentFeedback() {
+    // Store it in localstorage:
+    tempStoreFeedback();
+    let comment = feedback.getValue();
+    formInput = document.getElementById("formcomment");
+    formInput.value = comment;
 }
 
 

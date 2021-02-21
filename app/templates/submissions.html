@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+    <title>Small app of calm</title>
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"> 
+     <link rel="stylesheet" href="/css/custom_stylesheet.css"> 
+</head>
+<body>
+    <section class="hero">
+  <div class="hero-body">
+    <div class="container">
+      <h1 class="title">
+          {{ context.coursecode}}
+      </h1>
+      <h2 class="subtitle">
+        Teaching assistants little helper
+      </h2>
+    </div>
+  </div>
+</section>
+
+  <nav class="level">
+      <div class="level-item">
+        <h1>{{ context.submission }}</h1>
+        <a href="../" class="button menu-button">Back</a>
+      </div>
+  </nav>
+
+<div class="container">
+    <table class="table is-striped is-fullwidth">
+    {% for display_name in context.assignment_names %}
+    <tr>
+        <td class="folders"><a href="{{ display_name }}">{{ display_name }}</a> </td>
+    </tr>
+    {% endfor %}
+    </table>
+</div>
+
+</body>
+</html>

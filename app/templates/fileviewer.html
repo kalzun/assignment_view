@@ -8,14 +8,13 @@
     <script type="text/javascript"
         src="/js/brython/brython.js">
     </script>
-    <script src="/js/brython/brython_stdlib.js">
-    </script>
+    <script src="/js/brython/brython_stdlib.js"> </script>
+    <script src="https://unpkg.com/htmx.org@1.2.0"></script>
 </head>
 
 <body onload="brython()">
 
 <!-- Top section --> 
-<section class="section">
   <div class="container">
       <div class="notification is-light">
   <nav class="level">
@@ -25,14 +24,14 @@
         <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
       </div>
 
-      <a href="../" class="button">{{ name_submission }}</a>
-      <a href="./" class="button">Group {{group}}</a>
+      <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
+      <a href="/api_submissions/{{ context.group_nr }}/" class="button">Group {{ context.group_nr}}</a>
       <div class="cycle-students">
-          {% if prev_submission %}
-              <a href="{{prev_submission}}" class="button">&lt; Previous</a>
+          {% if context.index.prev %}
+          <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n -1}}" class="button">&lt; Previous</a>
           {% endif %}
-          {% if next_submission %}
-              <a href="{{next_submission}}" class="button">Next &gt;</a>
+          {% if context.index.next %}
+              <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n +1}}" class="button">Next &gt;</a>
           {% else %}
               <a href="#" class="button" >Finito!</a>
           {% endif %}
@@ -41,7 +40,6 @@
   </nav>
   </div>
   </div>
-</section>
 
 {% if context %}
 <div class="container">  
@@ -62,7 +60,6 @@
 </div>
 
 <!-- Modal for tasks -->
-<button id="task" class="button is-primary is-light" onclick="activateModal()">Task description</button>
 
 <div id="task-modal" class="modal">
   <div class="modal-background"></div>
@@ -72,10 +69,10 @@
       <button id="close-modal" class="delete" aria-label="close"></button>
     </header>
     <section class="modal-card-body">
-        {{ tasks }}
+        {{ context.tasks }}
     </section>
     <footer class="modal-card-foot">
-        <a href="/pdfs/{{ task_pdf }}" target="_blank">Open as PDF</a>
+        <a href="/pdfs/{{ context.pdf }}" target="_blank">Open as PDF</a>
     </footer>
   </div>
 </div>
@@ -87,15 +84,37 @@
     <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
     <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
   </div>
-
-  <div class="level-right">
-    <button id="find_input" class="button is-primary is-light">Test_button</button>
+  <div class="level-item">
+    <button id="task" class="button is-primary is-light" onclick="activateModal()">Task description</button>
   </div>
 
   <div class="level-right">
     <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
   </div>
 </nav>
+
+<div class="level">
+    <div class="level-left"></div>
+        <div class="level-right">
+            <form id="save_to_canvas" hx-post="/put-canv" hx-target="this" hx-swap="outerHTML">
+            <div class="field is-grouped">
+                <div class="select">
+                  <select name="grade">
+                    <option value="null">Ikke karaktersatt</option>
+                    <option value="incomplete">Ikke godkjent</option>
+                    <option value="complete">Godkjent</option>
+                  </select>
+                  <input type="hidden" name="comment" id="formcomment" />
+                  <input type="hidden" name="user_id" value="{{ context.user_id }}" />
+                  <input type="hidden" name="assignment_id" value="{{ context.assignment_id }}" />
+                </div>
+                <div class="control">
+                    <button class="button is-primary is-light" onclick="getCommentFeedback()">Save to Canvas</button>
+                  </div>
+                </div>
+            </form>
+        </div>
+</div>
 
 <section class="section">
     <div class="container custom-ace-container">
@@ -107,11 +126,12 @@
                 {% endif %}
             </div>
             <div id="parent-to-ace" class="column is-mobile">
-                <div id="feedback-field">Feedback to {{ studentcode }}:</div>
+                <div id="feedback-field" form="save_to_canvas">Feedback to {{ studentcode }}:</div>
             </div>
         </div>
     </div>
 </section>
+
     <script>
         var assignment_name = "{{ name_submission }}";
         var group_n = "{{ group }}";
@@ -128,7 +148,7 @@
         highlightGutterLine: false,
         printMargin: false,
         showGutter: false,
-        minLines: 1,
+        minLines: 50,
         wrap: true,
     });
     feedback.session.setMode("ace/mode/markdown");

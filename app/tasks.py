@@ -27,7 +27,6 @@ env_name = ".env_secret"
 env_path = Path(".") / env_name
 load_dotenv(dotenv_path=env_path)
 
-USERNAME = os.getenv("USERNAME")
 TOKEN = os.getenv("TOKEN")
 
 headers = {"Authorization": f"Bearer {TOKEN}"}

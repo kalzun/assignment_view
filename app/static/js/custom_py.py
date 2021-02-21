@@ -14,7 +14,7 @@ def find_all_inputs(ev):
     sub_code = document['submissioncode']
     InfoDialog('Output', "yes")
 
-document['find_input'].bind('click', find_all_inputs)
+# document['find_input'].bind('click', find_all_inputs)
 
 
 redirect = Redirect()

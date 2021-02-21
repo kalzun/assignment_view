@@ -9,6 +9,9 @@ frontend/*
 pyvenv.cfg
 .DS_Store
 
+# db
+*.db
+
 # personal files from students
 *.csv
 submissions/*
