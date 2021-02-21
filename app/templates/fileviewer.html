@@ -13,7 +13,7 @@
 </head>
 
 <body onload="brython()">
-    
+
 <!-- Top section --> 
 <section class="section">
   <div class="container">
@@ -101,7 +101,7 @@
     <div class="container custom-ace-container">
         <div class="columns ">
             <div id="parent-to-ace" class="column is-three-fifths is-mobile">
-                <code class="python" id="submissioncode">{{ context }}</code>
+                <code class="python" id="submissioncode">{{ context.code }}</code>
                 {% else %}
                 <h1>Could not find file</h1>
                 {% endif %}

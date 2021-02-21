@@ -6,6 +6,8 @@ import json
 # Contains the coursecode e.g.
 SEMESTER_FILE = 'semester.json'
 
+DB = 'sqlite.db'
+
 
 # Logging setup
 LOGFOLDER = Path("logs")

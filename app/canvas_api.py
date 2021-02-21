@@ -89,6 +89,7 @@ def create_tables():
                 current_grade TEXT,
                 current_grader TEXT,
                 filename TEXT,
+                modified_at REAL,
                 display_name TEXT,
                 code BLOB
             )"""
@@ -99,7 +100,7 @@ def create_tables():
                 """CREATE TABLE info
                 (latest_fetch INTEGER)"""
             )
-            cursor.execute("INSERT INTO info VALUES (?)", 0)
+            cursor.execute("INSERT INTO info VALUES (?)", (0, ))
 
             conn.commit()
 
@@ -265,10 +266,22 @@ async def get_specific_data(
                 text = await fetch_endpoint(
                     url=attachment_url, return_json=False, session=session, **kwargs)
                 code = text
+                code_modified = float(time.mktime(time.strptime(get_sublist(data.get("attachments", None)).get("modified_at", None), '%Y-%m-%dT%H:%M:%SZ')))
             except Exception as err:
                 logger.error(f"Error during fetching code {err}")
                 logger.debug(f"Error during fetching code {err}")
                 code = 'No submission found'
+                code_modified = 0.0
+
+            try:
+                filename = str(get_sublist(data.get("attachments", None)).get(
+                        "filename", None
+                    ))
+            except TypeError as err:
+                logger.debug(f"{err} while converting filename {get_sublist(data.get('attachments', None)).get('filename', None)}")
+                filename = 'NO FILENAME'
+
+
             all_rows.append(
                 (
                     int(USERS[user_id].get("group", "NoGroup")),
@@ -280,9 +293,8 @@ async def get_specific_data(
                     grader_id,
                     str(data["current_grade"]),
                     str(data["current_grader"]),
-                    str(get_sublist(data.get("attachments", None)).get(
-                        "filename", None
-                    )),
+                    filename,
+                    code_modified,
                     str(get_sublist(data.get("attachments", None)).get(
                         "display_name", None
                     )),
@@ -291,14 +303,17 @@ async def get_specific_data(
             )
 
         if all_rows:
-            logger.debug(f"Awaiting DB executioins of all_rows")
-            await conn.executemany(
-                """
-                INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                all_rows,
-            )
-            await conn.commit()
-            logger.debug(f"Writing rows to db")
+            try:
+                logger.debug(f"Awaiting DB executioins of all_rows")
+                await conn.executemany(
+                    """
+                    INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    all_rows,
+                )
+                await conn.commit()
+                logger.debug(f"Writing rows to db")
+            except sqlite3.InterfaceError as err:
+                logger.debug(f"Error {err} in this: {all_rows}")
 
         # async with aiofiles.open(file, "a", encoding="utf-8", newline="") as f:
         #     row = ",".join(str(value) for value in specific_data.values())
