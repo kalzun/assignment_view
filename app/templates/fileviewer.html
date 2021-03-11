@@ -13,7 +13,10 @@
 </head>
 
 <body onload="brython()">
-
+    
+    {% if context.second_attempt %}
+    found: <a href="/api_submissions/{{ context.group_nr }}/{{ context.second_attempt[1] }}/{{ context.index.n }}/{{ context.second_attempt[3] }}">Egenretting</a>
+    {% endif %}
 <!-- Top section --> 
   <div class="container">
       <div class="notification is-light">

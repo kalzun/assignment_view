@@ -34,8 +34,6 @@ headers = {"Authorization": f"Bearer {TOKEN}"}
 
 def get_pdfs():
     # Fetch all pdfs in folder
-    if not Path(PDF_FOLDER).exists():
-        Path(PDF_FOLDER).mkdir()
     pdfs = [f.name for f in Path(PDF_FOLDER).iterdir() if f.suffix == ".pdf"]
     return pdfs
 
@@ -130,6 +128,8 @@ def get_assignments():
 
 
 def process_files():
+    if not Path(PDF_FOLDER).exists():
+        Path(PDF_FOLDER).mkdir()
     fetch_files_externally()
     rename_files()
     save_to_file()

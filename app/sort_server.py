@@ -180,6 +180,8 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                 (group, assignment_name),
             ).fetchall()
             submissions = [attribute_submission(subm) for subm in submissions]
+            submission = submissions[index - 1]
+
             return render_template(
                 "fileviewer.html",
                 context={
@@ -188,12 +190,13 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                         "prev": is_previous_index(submissions),
                         "next": is_next_index(submissions),
                     },
-                    "code": submissions[index - 1]["code"],
-                    "sis_user_id": submissions[index - 1]["sis_user_id"],
-                    "user_id": submissions[index - 1]["user_id"],
-                    "assignment_id": submissions[index - 1]["assignment_id"],
+                    "code": submission["code"],
+                    "sis_user_id": submission["sis_user_id"],
+                    "user_id": submission["user_id"],
+                    "assignment_id": submission["assignment_id"],
                     "group_nr": group,
-                    "assignment_name": submissions[index - 1]["assignment_name"],
+                    "assignment_name": submission["assignment_name"],
+                    "second_attempt": get_second_attempts(submission["sis_user_id"], assignment_name),
                     "tasks": Markup(pdf),
                     "pdf": assignment_name.replace(" ", "_"),
                 },
@@ -205,6 +208,7 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
             (group, assignment_name),
         ).fetchall()
         submissions = [attribute_submission(subm) for subm in submissions]
+        submission = submissions[index - 1]
         code, sis_user_id, group_nr = conn.execute(
             """SELECT
                 code, sis_user_id, group_nr FROM cache
@@ -221,11 +225,12 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                     "next": is_next_index(submissions),
                 },
                 "code": code,
-                "user_id": submissions[index - 1]["user_id"],
-                "assignment_id": submissions[index - 1]["assignment_id"],
+                "user_id": submission["user_id"],
+                "assignment_id": submission["assignment_id"],
                 "sis_user_id": sis_user_id,
                 "group_nr": group_nr,
                 "assignment_name": assignment_name,
+                "second_attempt": get_second_attempts(submission["sis_user_id"], assignment_name),
                 "tasks": Markup(pdf),
                 "pdf": assignment_name.replace(" ", "_"),
             },
@@ -246,6 +251,31 @@ def attribute_submission(sequence: tuple) -> dict:
         "user_id": sequence[9],
     }
     return submission
+
+
+def get_second_attempts(sis_user_id, assignment_name):
+    with sqlite3.connect(DB) as conn:
+        submissions = conn.execute(
+            """
+            SELECT t1.sis_user_id, assignment_name, t1.modified_at, filename
+            FROM cache t1
+            JOIN (
+              SELECT sis_user_id, max(modified_at) as newest
+              FROM cache
+              WHERE instr(assignment_name, ?) > 0
+              AND sis_user_id = ?
+              ) as t2
+              ON t1.sis_user_id = t2.sis_user_id
+              AND t1.modified_at = t2.newest
+          """,
+            ('Egenretting ' + assignment_name, sis_user_id),
+        ).fetchall()
+        try:
+            second_attempt = submissions[-1]
+            print(second_attempt)
+        except IndexError:
+            second_attempt = None
+        return second_attempt
 
 
 @app.route("/pdfs/<filename>")

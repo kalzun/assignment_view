@@ -393,6 +393,10 @@ async def main():
     get_last_update_time()
 
     head = req.head(gradebook_endpoint, headers=headers)
+    # Fx. if creds are not valid, it will fail here: 
+    # TODO feedback to UI
+    head.raise_for_status()
+
     logger.debug(f"Headers from gradebook: {head.text}")
 
     # Make the urls list:
