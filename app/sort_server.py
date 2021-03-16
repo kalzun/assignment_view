@@ -19,7 +19,7 @@ from time import ctime
 from .settings import CONFIG, LOGFOLDER, LOGFILENAME, DB, GRADE_ENDPOINT
 from dotenv import load_dotenv
 from app.tasks import get_assignments, process_files
-from .canvas_api import build_assignments, feedback_grade
+from .canvas_api import build_assignments, feedback_grade, db_validator
 import logging
 import sqlite3
 from urllib.parse import urljoin
@@ -90,6 +90,9 @@ def index():
 
 @app.route(f"/{SUBMISSION_FOLDER}/")
 def get_groups(folder="", group=0):
+    if not db_validator():
+        print("Db has no data - please update from API")
+        abort(500)
     with sqlite3.connect(DB) as conn:
         max_groups = conn.execute("SELECT MAX(group_nr) FROM cache").fetchone()[0]
         assignment_names = conn.execute(

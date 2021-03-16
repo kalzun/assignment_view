@@ -101,11 +101,7 @@ def feedback_grade(params, endpoint, visible=False):
 def get_n_pages(resp):
     link = resp.headers.get("link", 0)
     if link:
-        # Find last line
-        lines = link.split(",")
-        match = re.search("&page=[0-9]*", lines[-1])
-        # Return the number of pages
-        return int(match.group()[-2:].strip("="))
+        return int(re.search('(\d*).{15}rel="last"$', link).group(1))
 
 
 def make_urls(head: dict, max_n_pages: int) -> list:
@@ -141,7 +137,6 @@ async def fetch_endpoint(
 async def get_specific_data(
     url: str, session: aiohttp.ClientSession, conn: aiosqlite.Connection, **kwargs
 ) -> dict:
-    logger.debug("Should get_specific_data")
     specific_data = {}
 
     def get_sublist(sequence):
@@ -376,24 +371,41 @@ def set_last_update_time():
             cursor.execute("UPDATE info set latest_fetch=?", (time.time(),))
             conn.commit()
 
+
+def db_validator():
+    with closing(sqlite3.connect(DB)) as conn:
+        try:
+            cache, info = (
+                conn.execute("SELECT * FROM cache").fetchone(),
+                conn.execute("SELECT * FROM info").fetchone(),
+            )
+        except sqlite3.OperationalError as err:
+            logger.debug(f"Db error, not setup tables - {err}")
+            logger.debug(f"Creating tables")
+            create_tables()
+            return False
+
+    return bool(cache)
+
+
 def db_setup():
     if Path(DB).exists():
-        logger.debug('Db is setup')
+        logger.debug("Db is created")
         return True
     else:
-        logger.debug('Db is not setup')
+        logger.debug("Db is not setup")
         create_tables()
 
 
 async def main():
     global URLS
 
-    db_setup()
+    db_validator()
 
     get_last_update_time()
 
     head = req.head(gradebook_endpoint, headers=headers)
-    # Fx. if creds are not valid, it will fail here: 
+    # Fx. if creds are not valid, it will fail here:
     # TODO feedback to UI
     head.raise_for_status()
 
@@ -418,6 +430,13 @@ async def main():
 
 def build_assignments():
     asyncio.run(main())
+
+
+def reset_db():
+    """ Resets db """
+    with closing(sqlite3.connect(DB)) as conn:
+        conn.execute("DROP TABLE cache")
+        conn.execute("DROP TABLE info")
 
 
 if __name__ == "__main__":
