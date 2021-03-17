@@ -8,11 +8,19 @@ window.addEventListener('DOMContentLoaded',function () {
 
 
 function createPythonCode() {
+    getCustomHandler();
     const pythonScript = document.createElement("script");
     const parent = document.getElementById("running");
     pythonScript.type = "text/python";
+    
+    pythonScript.append(getCustomHandler());
     pythonScript.append(editor.getValue());
     parent.appendChild(pythonScript);
+}
+
+function getCustomHandler() {
+    const customHandler = document.getElementById("customHandler");
+    return customHandler.text;
 }
 
 function clearUp() {

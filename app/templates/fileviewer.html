@@ -150,6 +150,49 @@
     </script>
 <script src="/js/custom_base.js" type="text/javascript" charset="utf-8"></script>
 <script src="/js/custom_py.py" type="text/python" charset="utf-8"></script>
+<script id="customHandler" type="text/python">
+     
+from browser import document
+from browser.local_storage import storage
+# Mocking file read/write
+
+class File:
+
+  def __init__(self, name, mode):
+      self.name = name
+      self.mode = mode
+      self.content = ''
+
+  def __enter__(self):
+      return self
+
+  def __exit__(self, exc_type, exc_value, tb):
+      pass
+
+  def write(self, data):
+      if self.mode == "w":
+          self.content += data
+          storage[self.name] = self.content
+      else:
+          raise IOError("read only")
+
+  def read(self):
+      if self.name in storage:
+          return storage[self.name]
+      raise IOError("file not found")
+
+  def close(self):
+      return
+
+def mock_open(name, mode="r"):
+    print("Mocked open")
+    return File(name, mode)
+
+open = mock_open
+
+</script>
+
+
 <script src="/js/ace/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
     var feedback = ace.edit("feedback-field");
