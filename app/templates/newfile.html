@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+    <title>Little app of calm</title>
+    <meta charset="utf-8">
+     <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
+     <link rel="stylesheet" href="/css/custom_stylesheet.css"> 
+    <script src="https://unpkg.com/htmx.org@1.2.0"></script>
+</head>
+
+<body>
+<!-- Top section --> 
+  <div class="container">
+
+
+
+<!-- Mid - buttons -->
+
+<nav class="level">
+  <div class="level-item">
+    <button id="files-button" class="button is-primary is-light" onclick="activateModal('files-modal')">Files</button>
+  </div>
+</nav>
+
+<!-- Modal for files -->
+
+<div id="files-modal" class="modal">
+  <div class="modal-background" id="files-modal-bg"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+        <p class="modal-card-title">Files</p>
+      <button id="files-modal-close-modal" class="delete" aria-label="close"></button>
+    </header>
+    <div class="modal-card-body">
+      <nav id="files-panel" class="panel">
+        <p class="panel-heading">
+          All files
+        </p>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<nav class="level">
+  <div class="level-item">
+    <form id="save_to_localStorage">
+      <div class="field is-grouped">
+          <label for="filename"></label>
+          {% if context %}
+            <input id="valid-file" type="text" value="{{context}}">
+          {% else %}
+            <input id="valid-file" type="text" value="newfile">
+          {% endif %}
+          <div class="control">
+              <button class="button is-primary is-light" type="button" onclick="saveFile()">Save File</button>
+            </div>
+          </div>
+      </form>
+  </div>
+</nav>
+
+<section class="section">
+  <div id="file-content">
+                <div id="feedback-field" >File Content</div>
+            </div>
+</section>
+
+
+
+<footer class="footer">
+    <div class="content has-text-centered">
+      <p>Hit <code>CTRL  ,</code> for editor settings <code>(macos: ⌘,)</code></p>
+    <p>
+      <strong>Little App of Calm</strong>  <a href="https://youtu.be/e1oO08T49s8">(not a book)</a>
+    </p>
+  </div>
+</footer>
+
+<script src="/js/custom_base.js" type="text/javascript" charset="utf-8"></script>
+<script src="/js/clientFileHandler.js" type="text/javascript" charset="utf-8"></script>
+<script src="/js/ace/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+    var editor = ace.edit("feedback-field");
+    editor.setTheme("ace/theme/gruvbox");
+    editor.setOptions({
+        showLineNumbers: true,
+        displayIndentGuides: false,
+        highlightGutterLine: false,
+        printMargin: false,
+        showGutter: true,
+        minLines: 50,
+        wrap: true,
+    });
+</script>
+</body>
+</html>
