@@ -17,34 +17,108 @@
     {% if context.second_attempt %}
     found: <a href="/api_submissions/{{ context.group_nr }}/{{ context.second_attempt[1] }}/{{ context.index.n }}/{{ context.second_attempt[3] }}">Egenretting</a>
     {% endif %}
+
 <!-- Top section --> 
   <div class="container">
       <div class="notification is-light">
-  <nav class="level">
-      <div class="level-left">
-            Student: <input class="input" type="text" type="text" value="{{ context.sis_user_id }}" id="studentcode" readonly>
-        <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
-        <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
-      </div>
+    <nav class="level">
+        <div class="level-left">
+              Student: <input class="input" type="text" type="text" value="{{ context.sis_user_id }}" id="studentcode" readonly>
+          <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
+          <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
+        </div>
 
-      <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
-      <a href="/api_submissions/{{ context.group_nr }}/" class="button">Group {{ context.group_nr}}</a>
-      <div class="cycle-students">
-          {% if context.index.prev %}
-          <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n -1}}" class="button">&lt; Previous</a>
-          {% endif %}
-          {% if context.index.next %}
-              <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n +1}}" class="button">Next &gt;</a>
-          {% else %}
-              <a href="#" class="button" >Finito!</a>
-          {% endif %}
-      </div>
-      
-  </nav>
-  </div>
+        <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
+        <a href="/api_submissions/{{ context.group_nr }}/" class="button">Group {{ context.group_nr}}</a>
+        <div class="cycle-students">
+            {% if context.index.prev %}
+            <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n -1}}" class="button">&lt; Previous</a>
+            {% endif %}
+            {% if context.index.next %}
+                <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n +1}}" class="button">Next &gt;</a>
+            {% else %}
+                <a href="#" class="button" >Finito!</a>
+            {% endif %}
+        </div>
+        
+    </nav>
   </div>
 
-{% if context %}
+
+<!-- Modal for tasks -->
+
+<div id="task-modal" class="modal">
+  <div class="modal-background" id="task-modal-bg"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+        <p class="modal-card-title">Task description</p>
+      <button id="task-modal-close-modal" class="delete" aria-label="close"></button>
+    </header>
+    <section class="modal-card-body">
+        {{ context.tasks }}
+    </section>
+    <footer class="modal-card-foot">
+        <a href="/pdfs/{{ context.pdf }}" target="_blank">Open as PDF</a>
+    </footer>
+  </div>
+</div>
+
+<!-- Modal for files -->
+<div id="files-modal" class="modal">
+  <div class="modal-background" id="files-modal-bg"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+        <p class="modal-card-title">Files</p>
+      <button id="files-modal-close-modal" class="delete" aria-label="close"></button>
+    </header>
+    <div class="modal-card-body">
+      <nav id="files-panel" class="panel">
+        <p class="panel-heading">
+          All files
+        </p>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Mid - buttons -->
+
+<nav class="level">
+  <div class="level-left">
+    <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
+    <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
+  </div>
+  <div class="level-item">
+    <button id="task" class="button is-primary is-light" onclick="activateModal('task-modal')">Task description</button>
+  </div>
+  <div class="level-item">
+    <button id="files-button" class="button is-primary is-light" onclick="activateModal('files-modal')">Files</button>
+  </div>
+
+  <div class="level-right">
+    <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
+  </div>
+</nav>
+
+
+
+<section class="section">
+    <div class="container custom-ace-container">
+        <div class="columns ">
+            <div id="parent-to-ace" class="column is-three-fifths is-mobile">
+                {% if context %}
+                <code class="python" id="submissioncode">{{ context.code }}</code>
+                {% else %}
+                <h1>Could not find file</h1>
+                {% endif %}
+            </div>
+            <div id="parent-to-ace" class="column is-mobile">
+                <div id="feedback-field" form="save_to_canvas">Feedback to {{ studentcode }}:</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div class="container">  
     <!-- Output box -->
     <div class="box">
@@ -57,44 +131,12 @@
                 <button class="button" onclick="clearUp()">Clear result</button>
             </div>
         </nav>
-           <pre><code class="python" id="result-code-ran">Run the code, see the results here...</code></pre>
+        <pre class="console-output">
+          <div id="result-code-ran">>>></div>
+        </pre>
            <div id="running"></div>
       </div>
 </div>
-
-<!-- Modal for tasks -->
-
-<div id="task-modal" class="modal">
-  <div class="modal-background"></div>
-  <div class="modal-card">
-    <header class="modal-card-head">
-        <p class="modal-card-title">Task description</p>
-      <button id="close-modal" class="delete" aria-label="close"></button>
-    </header>
-    <section class="modal-card-body">
-        {{ context.tasks }}
-    </section>
-    <footer class="modal-card-foot">
-        <a href="/pdfs/{{ context.pdf }}" target="_blank">Open as PDF</a>
-    </footer>
-  </div>
-</div>
-
-
-<!-- Mid - buttons -->
-<nav class="level">
-  <div class="level-left">
-    <button class="button is-primary is-light" onclick="copyStudentsubmission()">Copy submission to clipboard!</button>
-    <span id="info-success-copy-submission" class="tag is-success is-light invisible">Copied to clipboard!</span>
-  </div>
-  <div class="level-item">
-    <button id="task" class="button is-primary is-light" onclick="activateModal()">Task description</button>
-  </div>
-
-  <div class="level-right">
-    <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
-  </div>
-</nav>
 
 <div class="level">
     <div class="level-left"></div>
@@ -119,22 +161,6 @@
         </div>
 </div>
 
-<section class="section">
-    <div class="container custom-ace-container">
-        <div class="columns ">
-            <div id="parent-to-ace" class="column is-three-fifths is-mobile">
-                <code class="python" id="submissioncode">{{ context.code }}</code>
-                {% else %}
-                <h1>Could not find file</h1>
-                {% endif %}
-            </div>
-            <div id="parent-to-ace" class="column is-mobile">
-                <div id="feedback-field" form="save_to_canvas">Feedback to {{ studentcode }}:</div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <footer class="footer">
     <div class="content has-text-centered">
       <p>Hit <code>CTRL  ,</code> for editor settings <code>(macos: ⌘,)</code></p>
@@ -149,19 +175,25 @@
         var group_n = "{{ context.group_nr }}";
     </script>
 <script src="/js/custom_base.js" type="text/javascript" charset="utf-8"></script>
+<script src="/js/fileviewer.js" type="text/javascript" charset="utf-8"></script>
+<script src="/js/clientFileHandler.js" type="text/javascript" charset="utf-8"></script>
 <script src="/js/custom_py.py" type="text/python" charset="utf-8"></script>
+
 <script id="customHandler" type="text/python">
-     
 from browser import document
 from browser.local_storage import storage
+import _io
 # Mocking file read/write
 
-class File:
+class File(_io.TextIOWrapper):
 
-  def __init__(self, name, mode):
+  def __init__(self, name, mode, content):
       self.name = name
       self.mode = mode
-      self.content = ''
+      self.content = content
+      self.stream_pos = 0
+      self.place = 0 
+
 
   def __enter__(self):
       return self
@@ -176,17 +208,53 @@ class File:
       else:
           raise IOError("read only")
 
-  def read(self):
-      if self.name in storage:
+  def read(self, n=None):
+      if self.name in storage and n is None:
           return storage[self.name]
+      elif self.name in storage and n > 0:
+          self.stream_pos += n
+          if len(self.content) > self.stream_pos:
+            return self.content[self.stream_pos-1]
+      else:
+          return ''
       raise IOError("file not found")
+
+  def readline(self):
+      self.place = self.content.find('\n')
+      if self.place == -1:
+          len_content = len(self.content)
+          if len_content > 0:
+              line = self.content[:]
+              self.content = self.content[len_content:]
+              self.stream_pos += len_content +1
+          else:
+              line = ''
+      else:
+          line = self.content[:self.place]
+          self.stream_pos += self.place + 1
+          # remove first line
+          self.content = self.content[self.place+1:]
+      return line
+
+
+  def readlines(self):
+      all_lines = []
+      line = self.readline()
+      while line != '':
+          all_lines.append(line + '\n')
+          line = self.readline()
+      return all_lines
+
+  def tell(self):
+      return self.stream_pos 
+
 
   def close(self):
       return
 
 def mock_open(name, mode="r"):
-    print("Mocked open")
-    return File(name, mode)
+    content = storage[name]
+    return File(name, mode, content)
 
 open = mock_open
 

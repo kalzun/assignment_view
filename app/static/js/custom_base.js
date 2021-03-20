@@ -1,12 +1,3 @@
-window.addEventListener('DOMContentLoaded',function () {
-    buttons = document.querySelectorAll(".button");
-    buttons.forEach(function(button) {
-        button.addEventListener("click", tempStoreFeedback);
-    });
-    loadTempStoredFeedback();
-});
-
-
 function createPythonCode() {
     getCustomHandler();
     const pythonScript = document.createElement("script");
@@ -98,11 +89,11 @@ function loadTempStoredFeedback() {
         feedback.setValue(rv);
 }
 
-function activateModal() {
-    modal = document.getElementById("task-modal");
+function activateModal(modalId) {
+    modal = document.getElementById(modalId);
     modal.classList.add("is-active");
-    bg_modal = document.querySelector(".modal-background");
-    d_btn_modal = document.getElementById("close-modal");
+    bg_modal = document.getElementById(modalId + "-bg");
+    d_btn_modal = document.getElementById(modalId + "-close-modal");
     bg_modal.addEventListener("click", function() {
         modal.classList.remove("is-active");
     });

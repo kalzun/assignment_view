@@ -87,6 +87,15 @@ def favicon():
 def index():
     return render_template("index.html")
 
+@app.route("/files")
+def filehandling():
+    return render_template("newfile.html")
+
+@app.route("/files/<filename>")
+def get_file(filename):
+    return render_template("newfile.html", context=filename)
+
+
 
 @app.route(f"/{SUBMISSION_FOLDER}/")
 def get_groups(folder="", group=0):
@@ -275,7 +284,6 @@ def get_second_attempts(sis_user_id, assignment_name):
         ).fetchall()
         try:
             second_attempt = submissions[-1]
-            print(second_attempt)
         except IndexError:
             second_attempt = None
         return second_attempt

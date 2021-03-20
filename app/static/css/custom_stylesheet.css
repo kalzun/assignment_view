@@ -46,6 +46,14 @@ tbody:nth-child(2n) {
     width: 60%;
 }
 
+#file-content {
+    display:inline-block;
+    position:relative;
+    height: 600px;
+    width: 100%;
+
+}
+
 #submissioncode {
     position: absolute;
     top: 0;
@@ -54,9 +62,12 @@ tbody:nth-child(2n) {
     left: 0;
 }
 
-#result-code-ran {
-      min-height: 50px;
+
+.console-output {
+    background-color: #000;
+    color: #EBDEBD;
 }
+
 
 #feedback-field {
     position: absolute;
