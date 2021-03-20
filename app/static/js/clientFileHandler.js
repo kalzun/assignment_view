@@ -66,6 +66,9 @@ function getFile(filename) {
 function showFiles(parentTag) {
   const files = getFilesIndex();
   const url = new URL(window.location.href);
+  while (parentTag.lastChild) {
+    parentTag.removeChild(parentTag.lastChild);
+  }
   for (let file of files) {
     const child = document.createElement("a");
     child.href = url.origin + "/files/"+ file

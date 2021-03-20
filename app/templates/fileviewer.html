@@ -183,9 +183,21 @@
 from browser import document
 from browser.local_storage import storage
 import _io
-# Mocking file read/write
+import os
+
+
+def mock_exists(path):
+    return bool(storage.get(path))
+
+def mock_rename(src, dst):
+    if mock_exists(src):
+        storage[dst] = storage.pop(src)
+
+os.rename = mock_rename
+os.path.exists = mock_exists
 
 class File(_io.TextIOWrapper):
+  # Mocking file read/write
 
   def __init__(self, name, mode, content):
       self.name = name
