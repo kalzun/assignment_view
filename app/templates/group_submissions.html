@@ -19,14 +19,21 @@
   </div>
 </section>
 
+<section class="section">
   <nav class="level">
       <div class="level-item">
-        <h1>{{ context.submission }}</h1>
         <a href="../" class="button menu-button">Back</a>
       </div>
   </nav>
+</section>
 
 <div class="container">
+    <div class="level">
+      <div class="level-item title is-6">Group {{ context.group }}</div>
+    </div>
+    <div class="level">
+      <div class="level-item subtitle is-6">Assignment: {{ context.assignment_name }} </div>
+    </div>
     <table class="table is-striped is-fullwidth">
         {% for submission in context.submissions %}
         <tr>

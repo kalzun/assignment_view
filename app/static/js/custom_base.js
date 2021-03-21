@@ -22,9 +22,27 @@ function clearUp() {
 }
 
 function runCodeInPython() {
+    const orgPrompt = prompt;
+    window.prompt = function(msg) {
+      const rv = orgPrompt(msg);
+      console.log("Scrolling")
+      // result.scrollIntoView(false);
+      return rv;
+    }
     clearUp();
     createPythonCode();
-    brython();
+    
+    function footScroll(){
+      const footerTag = document.querySelector(".footer")
+      footerTag.scrollIntoView(false);
+    }
+
+    (function(callback) {
+      brython();
+      callback();
+    })(footScroll);
+
+    
 }
 
 function copyStudentcode(show = true) {

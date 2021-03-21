@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>A little app of calm</title>
     <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
+    <link rel="stylesheet" href="/css/custom_stylesheet.css"> 
     <script src="https://unpkg.com/htmx.org@1.2.0"></script>
   </head>
 
@@ -38,31 +39,14 @@
                 </div>
                 <br />
 
+                <button id="keybinding-editor" class="button is-block is-primary is-fullwidth is-small" ></button>
+
             </div>
           </div>
         </div>
         <div class="column is-8 is-offset-2">
           <br>
           <nav class="level">
-            <div class="level-left">
-              <div class="level-item">
-                <span class="icon">
-                  <i class="fab fa-twitter"></i>
-                </span> &emsp;
-                <span class="icon">
-                  <i class="fab fa-facebook"></i>
-                </span> &emsp;
-                <span class="icon">
-                  <i class="fab fa-instagram"></i>
-                </span> &emsp;
-                <span class="icon">
-                  <i class="fab fa-github"></i>
-                </span> &emsp;
-                <span class="icon">
-                  <i class="fas fa-envelope"></i>
-                </span>
-              </div>
-            </div>
             <div class="level-right">
                 <small class="level-item" style="color: var(--textLight)">Join in and develop this together at  <a href="https://www.github.com/kalzun/">GitHub</a></small>
             </div>
@@ -70,88 +54,38 @@
         </div>
       </div>
     </section>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", function() {
+        const keybutton = document.querySelector("#keybinding-editor");
+        setKeybinding(true);
+        keybutton.addEventListener("click", function() {
+            setKeybinding();
+            });
+      function setKeybinding(get_value) {
+          const setting = localStorage.getItem("editorKeybinding");
+            if (setting === "" || setting === null){
+                    if (get_value){
+                      keybutton.innerHTML = "Normal Keybinding"
+                      return
+                          }
+
+              localStorage.setItem("editorKeybinding", "ace/keyboard/vim");
+              keybutton.innerHTML = "VIM mode ON"
+                }
+          else {
+                  if (get_value){
+                      keybutton.innerHTML = "VIM mode ON"
+                      return
+                     }
+
+            localStorage.setItem("editorKeybinding", "");
+            keybutton.innerHTML = "Normal Keybinding"
+              }
+            }
+     })
+
+    </script>
   </body>
-  <style>
-    :root {
-      --brandColor: hsl(166, 67%, 51%);
-      --background: rgb(247, 247, 247);
-      --textDark: hsla(0, 0%, 0%, 0.66);
-      --textLight: hsla(0, 0%, 0%, 0.33);
-    }
-
-    body {
-      background: var(--background);
-      height: 100vh;
-      color: var(--textDark);
-    }
-
-    .field:not(:last-child) {
-      margin-bottom: 1rem;
-    }
-
-    .register {
-      margin-top: 10rem;
-      background: white;
-      border-radius: 10px;
-    }
-
-    .left,
-    .right {
-      padding: 4.5rem;
-    }
-
-    .left {
-      border-right: 5px solid var(--background);
-    }
-
-    .left .title {
-      font-weight: 800;
-      letter-spacing: -2px;
-    }
-
-    .left .colored {
-      color: var(--brandColor);
-      font-weight: 500;
-      margin-top: 1rem !important;
-      letter-spacing: -1px;
-    }
-
-    .left p {
-      color: var(--textLight);
-      font-size: 1.15rem;
-    }
-
-    .right .title {
-      font-weight: 800;
-      letter-spacing: -1px;
-    }
-
-    .right .description {
-      margin-top: 1rem;
-      margin-bottom: 1rem !important;
-      color: var(--textLight);
-      font-size: 1.15rem;
-    }
-
-    .right small {
-      color: var(--textLight);
-    }
-
-    input {
-      font-size: 1rem;
-    }
-
-    input:focus {
-      border-color: var(--brandColor) !important;
-      box-shadow: 0 0 0 1px var(--brandColor) !important;
-    }
-
-    .fab,
-    .fas {
-      color: var(--textLight);
-      margin-right: 1rem;
-    }
-
-  </style>
 
 </html>

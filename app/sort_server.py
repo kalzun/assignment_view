@@ -164,6 +164,8 @@ def get_submissions_by_ass(group=1, assignment_name=""):
         return render_template(
             "group_submissions.html",
             context={
+                "assignment_name": assignment_name,
+                "group": group,
                 "coursecode": COURSECODE,
                 "submissions": submissions,
             },

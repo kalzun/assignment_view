@@ -81,6 +81,8 @@
 <script src="/js/ace/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
     var editor = ace.edit("feedback-field");
+    const keybindingSetting = localStorage.getItem("editorKeybinding");
+    editor.setKeyboardHandler(keybindingSetting);
     editor.setTheme("ace/theme/gruvbox");
     editor.setOptions({
         showLineNumbers: true,

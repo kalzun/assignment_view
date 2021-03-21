@@ -3,10 +3,8 @@ window.addEventListener('DOMContentLoaded', function() {
   showFiles(filespanel);
   // show content of file if any
   const context = document.querySelector("#valid-file");
-  console.log(context)
   if (context) {
     const filename = context.value;
-    console.log(filename)
     editor.setValue(localStorage.getItem(filename));
   }
 });
@@ -65,6 +63,9 @@ function getFile(filename) {
 
 function showFiles(parentTag) {
   const files = getFilesIndex();
+  if (!files) {
+    return
+  }
   const url = new URL(window.location.href);
   while (parentTag.lastChild) {
     parentTag.removeChild(parentTag.lastChild);
