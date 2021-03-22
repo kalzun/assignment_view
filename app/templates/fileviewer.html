@@ -28,8 +28,8 @@
           <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
         </div>
 
-        <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
         <a href="/api_submissions/{{ context.group_nr }}/" class="button">Group {{ context.group_nr}}</a>
+        <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
         <div class="cycle-students">
             {% if context.index.prev %}
             <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n -1}}" class="button">&lt; Previous</a>

@@ -56,19 +56,19 @@ sub_by_group = """
     assignment_name,
     table1.sis_user_id,
     table1.modified_at,
+    table1.user_id,
     current_grade,
     code,
-    assignment_id,
-    user_id
+    assignment_id
     FROM cache table1
     INNER JOIN
     (
-    SELECT sis_user_id, max(modified_at) MaxVal
+    SELECT user_id, max(modified_at) MaxVal
     FROM cache
     WHERE group_nr = ? AND assignment_name = ?
-    GROUP BY sis_user_id
+    GROUP BY user_id
     ) table2
-    ON table1.sis_user_id = table2.sis_user_id
+    ON table1.user_id = table2.user_id
     AND table1.modified_at = table2.maxval
     ORDER BY user_name
 """

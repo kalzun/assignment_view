@@ -190,7 +190,7 @@ async def get_specific_data(
                 logger.error(f"submitted_at is: {data['submitted_at']}")
                 submitted_at = 0
             if stats["last_update_time"] > submitted_at:
-                logger.debug(f"Skipping {data['assignment_id']} - {data['user_id']}")
+                # logger.debug(f"Skipping {data['assignment_id']} - {data['user_id']}")
                 stats["skipped"] += 1
                 continue
             try:
@@ -287,6 +287,7 @@ async def get_specific_data(
                 logger.debug(f"Writing rows to db")
             except sqlite3.InterfaceError as err:
                 logger.debug(f"Error {err} in this: {all_rows}")
+    logger.debug(f"Skipped {stats['skipped']}")
 
 
 async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
@@ -322,6 +323,7 @@ async def fetch_sections():
         if not group_nr:
             # skip groups that are not member of sections
             continue
+        group_nr = group_nr.split('-')[-1]
         if "students" not in group:  # This may be unnecessary
             continue
         for user in group["students"]:
@@ -329,7 +331,7 @@ async def fetch_sections():
             users[user_id] = {
                 "sis_user_id": user.get("sis_user_id", None),
                 "name": user.get("sortable_name", None),
-                "group": group_nr[-1],
+                "group": group_nr,
             }
     return users
 

@@ -52,16 +52,18 @@ def fetch_files_externally(url='', assignment_name="innlevering"):
     numbers_pat = re.compile("[0-9]+")
 
     resp = req.get(url, headers=headers)
-
     resp.raise_for_status()
 
+    already_stored_pdfs = set(get_pdfs())
     for d in resp.json():
         filename = d["display_name"]
         if pattern.search(filename):
             filename = filename.replace(" ", "")
             n_index = re.search(numbers_pat, filename).start()
             filename = filename[:n_index] + "_" + filename[n_index:]
-
+            if filename.replace("innlevering", "oppgave") in already_stored_pdfs:
+                logger.debug(f"Skipping {filename}")
+                continue
             # Download
             t1 = time.perf_counter()
             fileresp = req.get(d["url"], headers=headers)
