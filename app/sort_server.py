@@ -16,10 +16,11 @@ from textwrap import TextWrapper
 import json
 from pathlib import Path
 from time import ctime
-from .settings import CONFIG, LOGFOLDER, LOGFILENAME, DB, GRADE_ENDPOINT
+from .settings import CONFIG, LOGFOLDER, LOGFILENAME, DB, GRADE_ENDPOINT, CANVAS_DOMAIN
 from dotenv import load_dotenv
 from app.tasks import get_assignments, process_files
-from .canvas_api import build_assignments, feedback_grade, db_validator
+from .canvas_api import build_assignments, feedback_grade, db_validator, fetch_endpoint_blocking
+from requests import get
 import logging
 import sqlite3
 from urllib.parse import urljoin
@@ -259,10 +260,10 @@ def attribute_submission(sequence: tuple) -> dict:
         "assignment_name": sequence[3],
         "sis_user_id": sequence[4],
         "modified_at": sequence[5],
-        "current_grade": sequence[6],
-        "code": sequence[7],
-        "assignment_id": sequence[8],
-        "user_id": sequence[9],
+        "user_id": sequence[6],
+        "current_grade": sequence[7],
+        "code": sequence[8],
+        "assignment_id": sequence[9],
     }
     return submission
 
@@ -305,6 +306,15 @@ def update_from_api():
     build_assignments()
     process_files()
     return "Updated submissions!"
+
+@app.route("/get_submission_status/<ass_id>/<user_id>")
+def get_submission_status(ass_id, user_id):
+    # /api/v1/courses/:course_id/assignments/:assignment_id/submissions/:user_id
+    endpoint = f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/{ass_id}/submissions/{user_id}"
+
+    params = {"include": "submission_comments"}
+    resp = fetch_endpoint_blocking(endpoint, params)
+    return resp['entered_grade']
 
 
 @app.route("/put-canv", methods=["POST"])

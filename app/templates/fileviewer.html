@@ -141,6 +141,11 @@
 <div class="level">
     <div class="level-left"></div>
         <div class="level-right">
+          <div class="" hx-get="/get_submission_status/{{ context.assignment_id }}/{{ context.user_id }}" hx-trigger="load" hx-indicator="#fetch_progressing" hx-swap="outerHTML">
+          </div>
+            <div style="background-color:#fff">
+              <img id="fetch_progressing" class="htmx-indicator" src="{{url_for('static', filename='img/spinners/puff.svg')}}" />
+            </div>
             <form id="save_to_canvas" hx-post="/put-canv" hx-target="this" hx-swap="outerHTML">
             <div class="field is-grouped">
                 <div class="select">
@@ -219,7 +224,7 @@ class File(_io.TextIOWrapper):
       pass
 
   def write(self, data):
-      if self.mode == "w":
+      if self.mode == "w" or self.mode == "a":
           self.content += data
           storage[self.name] = self.content
       else:
@@ -266,10 +271,16 @@ class File(_io.TextIOWrapper):
       return self.stream_pos 
 
 
+  def __iter__(self):
+      for line in self.readlines():
+          yield line
+      
   def close(self):
       return
 
-def mock_open(name, mode="r"):
+def mock_open(name, mode="r", encoding="utf-8"):
+    if mode == 'w':
+        storage[name] = ''
     content = storage[name]
     return File(name, mode, content)
 

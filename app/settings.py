@@ -6,7 +6,6 @@ import json
 
 # Contains the coursecode e.g.
 SEMESTER_FILE = "semester.json"
-COURSE = "26755"
 
 DB = "sqlite.db"
 
@@ -35,11 +34,12 @@ with open(SEMESTER_FILE) as f:
     SETTINGS = json.load(f)
 
 CONFIG = {
+    "COURSE_ID": SETTINGS["COURSE_ID"],
     "COURSECODE": SETTINGS["COURSECODE"],
     "N_OF_GROUPS": int(SETTINGS["N_OF_GROUPS"]),
     "SUBMISSION_FOLDER": "api_submissions",
 }
 
 GRADE_ENDPOINT = (
-    f"{CANVAS_DOMAIN}/courses/{COURSE}/assignments/"  # assignment_id /submissions
+    f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/"  # assignment_id /submissions
 )

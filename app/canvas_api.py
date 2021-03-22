@@ -121,6 +121,15 @@ def make_urls(head: dict, max_n_pages: int) -> list:
             urls.append(increase_pattern.sub(f"&page={n}", match.group()))
     return urls
 
+def fetch_endpoint_blocking(url: str, params, _headers=None)  -> json:
+    if _headers is None:
+        _headers = headers
+    logger.debug(f"Fetching url {url}")
+    resp = req.get(url=url, params=params, headers=headers)
+    resp.raise_for_status()
+    logger.debug(f"Fetched url {url}")
+    return resp.json()
+
 
 async def fetch_endpoint(
     url: str, return_json: bool, session: aiohttp.ClientSession, **kwargs
