@@ -311,10 +311,10 @@ def update_from_api():
 def get_submission_status(ass_id, user_id):
     # /api/v1/courses/:course_id/assignments/:assignment_id/submissions/:user_id
     endpoint = f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/{ass_id}/submissions/{user_id}"
-
     params = {"include": "submission_comments"}
     resp = fetch_endpoint_blocking(endpoint, params)
-    return resp['entered_grade']
+    grade = resp['entered_grade']
+    return grade if grade is not None else 'Not graded'
 
 
 @app.route("/put-canv", methods=["POST"])

@@ -42,6 +42,11 @@
         </div>
         
     </nav>
+    <nav class="level">
+      <div class="level-item">
+        <span id="entered-grade" class="tag is-success is-light">Entered grade</span>
+      </div>
+    </nav>
   </div>
 
 
@@ -141,7 +146,7 @@
 <div class="level">
     <div class="level-left"></div>
         <div class="level-right">
-          <div class="" hx-get="/get_submission_status/{{ context.assignment_id }}/{{ context.user_id }}" hx-trigger="load" hx-indicator="#fetch_progressing" hx-swap="outerHTML">
+          <div class="" hx-get="/get_submission_status/{{ context.assignment_id }}/{{ context.user_id }}" hx-trigger="load" hx-indicator="#fetch_progressing" hx-target="#entered-grade" hx-swap="innerHTML">
           </div>
             <div style="background-color:#fff">
               <img id="fetch_progressing" class="htmx-indicator" src="{{url_for('static', filename='img/spinners/puff.svg')}}" />
