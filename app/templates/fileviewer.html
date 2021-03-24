@@ -14,9 +14,6 @@
 
 <body onload="brython()">
     
-    {% if context.second_attempt %}
-    found: <a href="/api_submissions/{{ context.group_nr }}/{{ context.second_attempt[1] }}/{{ context.index.n }}/{{ context.second_attempt[3] }}">Egenretting</a>
-    {% endif %}
 
 <!-- Top section --> 
   <div class="container">
@@ -99,6 +96,16 @@
   <div class="level-item">
     <button id="files-button" class="button is-primary is-light" onclick="activateModal('files-modal')">Files</button>
   </div>
+
+    {% if context.second_attempt %}
+    <div class="level-item">
+      <a class="button is-primary is-light" href="/api_submissions/{{ context.group_nr }}/{{ context.second_attempt[2] }}/{{ context.index.n }}/{{ context.second_attempt[-1] }}" >Second attempt</a>
+    </div>
+    {% elif context.final_org_submission %}
+    <div class="level-item">
+      <a class="button is-primary is-light" href="/diff/{{context.sis_user_id}}/{{context.assignment_name}}">Differing</a>
+    </div>
+    {% endif %}
 
   <div class="level-right">
     <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>

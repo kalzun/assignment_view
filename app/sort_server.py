@@ -1,5 +1,6 @@
 # from werkzeug.security import safe_join
 import os
+from difflib import HtmlDiff
 import subprocess as subproc
 from flask import (
     Flask,
@@ -197,6 +198,9 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
             submissions = [attribute_submission(subm) for subm in submissions]
             submission = submissions[index - 1]
 
+            sec_attempt = get_second_attempts(submission["sis_user_id"], assignment_name)
+            final_org_submission = get_final_submission(submission["sis_user_id"], assignment_name)
+
             return render_template(
                 "fileviewer.html",
                 context={
@@ -211,7 +215,8 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                     "assignment_id": submission["assignment_id"],
                     "group_nr": group,
                     "assignment_name": submission["assignment_name"],
-                    "second_attempt": get_second_attempts(submission["sis_user_id"], assignment_name),
+                    "second_attempt": sec_attempt,
+                    "final_org_submission": final_org_submission,
                     "tasks": Markup(pdf),
                     "pdf": assignment_name.replace(" ", "_"),
                 },
@@ -231,6 +236,9 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                 """,
             (group, assignment_name, filename),
         ).fetchone()
+        sec_attempt = get_second_attempts(submission["sis_user_id"], assignment_name)
+        final_org_submission = get_final_submission(submission["sis_user_id"], assignment_name)
+
         return render_template(
             "fileviewer.html",
             context={
@@ -245,51 +253,12 @@ def get_submission(group=1, assignment_name=None, index=None, filename=None):
                 "sis_user_id": sis_user_id,
                 "group_nr": group_nr,
                 "assignment_name": assignment_name,
-                "second_attempt": get_second_attempts(submission["sis_user_id"], assignment_name),
+                "second_attempt": sec_attempt,
+                "final_org_submission": final_org_submission,
                 "tasks": Markup(pdf),
                 "pdf": assignment_name.replace(" ", "_"),
             },
         )
-
-
-def attribute_submission(sequence: tuple) -> dict:
-    submission = {
-        "user_name": sequence[0],
-        "filename": sequence[1],
-        "display_name": sequence[2],
-        "assignment_name": sequence[3],
-        "sis_user_id": sequence[4],
-        "modified_at": sequence[5],
-        "user_id": sequence[6],
-        "current_grade": sequence[7],
-        "code": sequence[8],
-        "assignment_id": sequence[9],
-    }
-    return submission
-
-
-def get_second_attempts(sis_user_id, assignment_name):
-    with sqlite3.connect(DB) as conn:
-        submissions = conn.execute(
-            """
-            SELECT t1.sis_user_id, assignment_name, t1.modified_at, filename
-            FROM cache t1
-            JOIN (
-              SELECT sis_user_id, max(modified_at) as newest
-              FROM cache
-              WHERE instr(assignment_name, ?) > 0
-              AND sis_user_id = ?
-              ) as t2
-              ON t1.sis_user_id = t2.sis_user_id
-              AND t1.modified_at = t2.newest
-          """,
-            ('Egenretting ' + assignment_name, sis_user_id),
-        ).fetchall()
-        try:
-            second_attempt = submissions[-1]
-        except IndexError:
-            second_attempt = None
-        return second_attempt
 
 
 @app.route("/pdfs/<filename>")
@@ -299,6 +268,24 @@ def open_pdf(filename):
         filename + ".pdf",
     )
 
+@app.route("/diff/<sis_user_id>/<second_attempt_name>/")
+def get_diff_html(sis_user_id, second_attempt_name):
+    assignment_name = second_attempt_name.replace("Egenretting", "").strip()
+    try:
+        sec_attempt = get_second_attempts(sis_user_id, assignment_name)[1].split('\n')
+    except TypeError:
+        abort(404)
+
+    final_org_submission = get_final_submission(sis_user_id, assignment_name)[1].split('\n')
+    diff = HtmlDiff(wrapcolumn=90).make_table(final_org_submission, sec_attempt, context=True, numlines=5)
+    header_a, header_b = assignment_name, second_attempt_name
+    context = {
+        "header_a": header_a,
+        "header_b": header_b,
+        "table": Markup(diff),
+    }
+
+    return render_template("diff.html", context=context)
 
 @app.route("/update/")
 def update_from_api():
@@ -332,3 +319,66 @@ def put_canv():
         Endpoint {endpoint} Params: {params.items()}"""
         )
         return f"Received status: {feedback_grade(params, endpoint)}"
+
+
+
+def attribute_submission(sequence: tuple) -> dict:
+    submission = {
+        "user_name": sequence[0],
+        "filename": sequence[1],
+        "display_name": sequence[2],
+        "assignment_name": sequence[3],
+        "sis_user_id": sequence[4],
+        "modified_at": sequence[5],
+        "user_id": sequence[6],
+        "current_grade": sequence[7],
+        "code": sequence[8],
+        "assignment_id": sequence[9],
+    }
+    return submission
+
+
+def get_final_submission(sis_user_id, assignment_name):
+    assignment_name = assignment_name.replace("Egenretting", "").strip()
+    with sqlite3.connect(DB) as conn:
+        submission = conn.execute(
+            """
+            SELECT t1.sis_user_id, code, assignment_name, t1.modified_at, filename
+            FROM cache t1
+            JOIN (
+              SELECT sis_user_id, max(modified_at) as newest
+              FROM cache
+              WHERE assignment_name = ?
+              AND sis_user_id = ?
+              ) as t2
+              ON t1.sis_user_id = t2.sis_user_id
+              AND t1.modified_at = t2.newest
+              """,
+            (assignment_name, sis_user_id),).fetchone()
+        return submission
+
+def get_second_attempts(sis_user_id, assignment_name):
+    with sqlite3.connect(DB) as conn:
+        submissions = conn.execute(
+            """
+            SELECT t1.sis_user_id, code, assignment_name, t1.modified_at, filename
+            FROM cache t1
+            JOIN (
+              SELECT sis_user_id, max(modified_at) as newest
+              FROM cache
+              WHERE instr(assignment_name, ?) > 0
+              AND sis_user_id = ?
+              ) as t2
+              ON t1.sis_user_id = t2.sis_user_id
+              AND t1.modified_at = t2.newest
+          """,
+            ('Egenretting ' + assignment_name, sis_user_id),
+        ).fetchall()
+        try:
+            second_attempt = submissions[-1]
+        except IndexError:
+            second_attempt = None
+        return second_attempt
+
+
+

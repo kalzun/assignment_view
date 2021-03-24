@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+     <link rel="stylesheet" href="/css/bulma/bulma.min.css"> 
+  <title>Diff</title>
+<style>
+        .table.diff {
+          direction: ltr;
+          text-align: left;
+          border: medium;
+        }
+        span {
+          font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace;
+          font-size: 14px;
+        }
+        td {
+          font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace;
+          font-size: 14px;
+
+        }
+        tr {
+          background-color: #FAF3D1;
+        }
+        .diff_header {background-color:#e0e0e0}
+        td.diff_header {text-align:right}
+        .diff_next {background-color:#c0c0c0}
+        .diff_add {background-color:#aaffaa}
+        .diff_chg {background-color:#ffff77}
+        .diff_sub {background-color:#ffaaaa}
+ 
+</style>
+
+</head>
+<body>
+  <div class="container">
+    <nav class="level">
+      <div class="level-item">{{context.header_a}}</div>
+      <div class="level-item">{{context.header_b}}</div>
+    </nav>
+      {{ context.table }}
+  </div>
+</body>
+
+</html>
