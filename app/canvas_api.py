@@ -4,9 +4,11 @@ from pathlib import Path
 from typing import IO
 import aiofiles
 import aiohttp
+from aiohttp import ClientResponseError
 import aiosqlite
 import asyncio
 import csv
+from io import BytesIO
 import json
 import logging
 import os
@@ -14,7 +16,9 @@ import re
 import requests as req
 import sqlite3
 import sys
+import tempfile
 import time
+from zipfile import ZipFile
 
 
 logger = logging.getLogger(__name__)
@@ -65,32 +69,43 @@ def create_tables():
     with closing(sqlite3.connect(DB)) as conn:
         with closing(conn.cursor()) as cursor:
 
-            cursor.execute(
-                """CREATE TABLE cache
-                (group_nr INTEGER,
-                sis_user_id TEXT,
-                assignment_id INTEGER,
-                assignment_name TEXT,
-                user_id INTEGER,
-                user_name TEXT,
-                grader_id INTEGER,
-                current_grade TEXT,
-                current_grader TEXT,
-                filename TEXT,
-                modified_at REAL,
-                display_name TEXT,
-                code BLOB
-            )"""
-            )
-
             # Another table for meta-info about latest fetch, etc
             cursor.execute(
                 """CREATE TABLE info
                 (latest_fetch INTEGER)"""
             )
+
+            # Another table for submissions -
+            cursor.execute(
+                """CREATE TABLE submissions
+                (submission_id INTEGER,
+                assignment_id INTEGER,
+                assignment_name TEXT,
+                grader_id INTEGER,
+                current_grade TEXT,
+                current_grader TEXT,
+                group_nr INTEGER,
+                sis_user_id TEXT,
+                user_name TEXT,
+                user_id INTEGER
+                )"""
+            )
+
+            # Another table for attachments - for multiple attachments
+            cursor.execute(
+                """CREATE TABLE attachments
+                (displayname TEXT,
+                filename TEXT,
+                modified_at REAL,
+                code BLOB,
+                submission_id INTEGER,
+                FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
+                )"""
+            )
+
             cursor.execute("INSERT INTO info VALUES (?)", (0,))
 
-            conn.commit()
+        conn.commit()
 
 
 def feedback_grade(params, endpoint, visible=False):
@@ -121,7 +136,8 @@ def make_urls(head: dict, max_n_pages: int) -> list:
             urls.append(increase_pattern.sub(f"&page={n}", match.group()))
     return urls
 
-def fetch_endpoint_blocking(url: str, params, _headers=None)  -> json:
+
+def fetch_endpoint_blocking(url: str, params, _headers=None) -> json:
     if _headers is None:
         _headers = headers
     logger.debug(f"Fetching url {url}")
@@ -134,34 +150,115 @@ def fetch_endpoint_blocking(url: str, params, _headers=None)  -> json:
 async def fetch_endpoint(
     url: str, return_json: bool, session: aiohttp.ClientSession, **kwargs
 ) -> json:
+
+    if url == "not found":
+        return url
+
     logger.debug(f"Fetching url {url}")
     resp = await session.request(method="GET", url=url, **kwargs)
     resp.raise_for_status()
     logger.debug(f"Fetched url {url}")
     if return_json:
         return await resp.json()
-    return await resp.text()
+    return resp
 
 
-async def get_specific_data(
-    url: str, session: aiohttp.ClientSession, conn: aiosqlite.Connection, **kwargs
-) -> dict:
+async def unzip_file(url: str, submission_id: int, session=aiohttp.ClientSession, conn=aiosqlite.Connection, **kwargs) -> None:
+    """ Download a zip-file, decompress in tmp-folder, read to db """
+    async with aiohttp.ClientSession() as session:
+        resp = await fetch_endpoint(url, return_json=False, session=session, **kwargs)
+        filebyte = await resp.read()
+        with ZipFile(BytesIO(filebyte)) as zref:
+            tmp_dir = tempfile.TemporaryDirectory()
+            zref.extractall(tmp_dir.name)
+            for file in Path(tmp_dir.name).iterdir():
+                # Skip directories
+                if file.is_dir():
+                    continue
+                async with aiofiles.open(file) as f:
+                    content = await f.read()
+                    await conn.execute(
+                        """INSERT INTO attachments VALUES
+                        (?,
+                        ?,
+                        ?,
+                        ?,
+                        ?)""",
+                        (file.name,
+                         file.name,
+                         file.stat().st_ctime,
+                         content,
+                         submission_id,
+                         ),
+                    )
+            logger.info(f"Successfully unzipped {tmp_dir.name}")
+
+async def cache_attachments(
+    attachments: list,
+    submission_id: int,
+    session: aiohttp.ClientSession,
+    conn: aiosqlite.Connection,
+    **kwargs,
+) -> None:
+    # Loop through list of attachments, storing each attachment in db by submission_id as FK.
+
+    logger.debug(f"Inside cache_attachments - {submission_id=} - {attachments=} ")
+
+    if attachments is None:
+        logger.debug(f"{submission_id} has no attachments")
+        return
+
+    for att in attachments:
+        url = att.get("url", None)
+
+        # Skip if no url to file-attachment
+        if url is None:
+            continue
+
+        if att['size'] == 'null' or att['size'] == None:
+            logger.debug(f"Something wrong during upload, {att['filename']=} not valid. ({att['size']=})")
+            continue
+
+        resp = await fetch_endpoint(url, return_json=False, session=session, **kwargs)
+
+        logger.debug(f"{'zip' in att['content-type']} - {att['content-type']}")
+        if "zip" in att["content-type"]:
+            # TODO: Unzip
+            await unzip_file(url, submission_id, session, conn)
+            logger.debug(f"Should unzip {url}")
+
+        else:
+            code = await resp.text()
+            # Write to db using user_id as FK
+            await conn.execute(
+                """INSERT INTO attachments VALUES
+                (?,
+                ?,
+                ?,
+                ?,
+                ?)""",
+                (att.get("display_name", None),
+                 att.get("filename", None),
+                 att.get("modified_at", None),
+                 code,
+                 submission_id,
+                 ),
+            )
+            await conn.commit()
+
+
+async def cache_submissions(
+    url: str,
+    session: aiohttp.ClientSession,
+    conn: aiosqlite.Connection,
+    **kwargs,
+) -> None:
+    # Store every submission to cache db - and each attachment will be
+    # solved in other function (and table)
+
     specific_data = {}
-
-    def get_sublist(sequence):
-        attachments = []
-        if sequence is None:
-            return {}
-        for elem in sequence:
-            attachments.append(elem)
-        if len(attachments) != 1:
-            return {
-                "filename": "not found",
-                "display_name": "not found",
-                "url": "not found",
-            }
-            # raise IndexError('Multiple attachments not handled!')
-        return attachments[0]
+    # For name replacer "LastName, FirstName" -> "LastName_FirstName"
+    name_pattern = re.compile(",*\s")
 
     try:
         logger.debug(f"Awaiting jsresp from {url}")
@@ -182,10 +279,9 @@ async def get_specific_data(
         return specific_data
 
     else:
-        pattern = re.compile(",*\s")
-        all_rows = []
 
         for data in js_resp:
+
             # We do not want to download a submissions that is
             # previously fetched:
             try:
@@ -198,19 +294,28 @@ async def get_specific_data(
                 )
                 logger.error(f"submitted_at is: {data['submitted_at']}")
                 submitted_at = 0
+
             if stats["last_update_time"] > submitted_at:
-                # logger.debug(f"Skipping {data['assignment_id']} - {data['user_id']}")
+                logger.debug(
+                    f"Last update ({time.ctime(stats['last_update_time'])})\
+                      more recent than submission ({time.ctime(submitted_at)}) \
+                      Skipping {data['assignment_id']=} - {data['user_id']=}"
+                )
                 stats["skipped"] += 1
                 continue
+
+            grader_id = data.get("grader_id", 0)
+            # Grader_id is null from API, str(None) in python
+            if grader_id == "None" or grader_id is None:
+                grader_id = 0
             try:
-                grader_id = data.get("grader_id", 0)
-                # Grader_id is null from API, str(None) in python
-                if grader_id == "None" or grader_id is None:
-                    grader_id = 0
                 grader_id = int(grader_id)
                 assignment_id = int(data.get("assignment_id", 0))
                 user_id = int(data.get("user_id", 0))
             except TypeError as er:
+                grader_id = 0
+                assignment_id = 0
+                user_id = 0
                 logger.debug(
                     f"""{er} while converting
                                 {data['grader_id']}
@@ -220,88 +325,51 @@ async def get_specific_data(
                                 {data['user_id']}
                                 {type(data['user_id'])}"""
                 )
-                grader_id = 0
-                assignment_id = 0
-                user_id = 0
 
-            registered = USERS.get(user_id, None)
-            if not registered:
+            registered_user = USERS.get(user_id, None)
+            if not registered_user:
+                logger.debug(f"{user_id} not registered, not fetching submission")
                 continue
-            attachment_url = get_sublist(data.get("attachments", None)).get("url", None)
-            try:
-                logger.debug(
-                    f"Awaiting response from code download from {attachment_url}"
-                )
-                text = await fetch_endpoint(
-                    url=attachment_url, return_json=False, session=session, **kwargs
-                )
-                code = text
-                code_modified = float(
-                    time.mktime(
-                        time.strptime(
-                            get_sublist(data.get("attachments", None)).get(
-                                "modified_at", None
-                            ),
-                            "%Y-%m-%dT%H:%M:%SZ",
-                        )
-                    )
-                )
-            except Exception as err:
-                logger.error(f"Error during fetching code {err}")
-                logger.debug(f"Error during fetching code {err}")
-                code = "No submission found"
-                code_modified = 0.0
+            submission_id = int(data["id"])
 
-            try:
-                filename = str(
-                    get_sublist(data.get("attachments", None)).get("filename", None)
-                )
-            except TypeError as err:
-                logger.debug(
-                    f"{err} while converting filename {get_sublist(data.get('attachments', None)).get('filename', None)}"
-                )
-                filename = "NO FILENAME"
+            # Fetch attachments
+            attachments = data.get("attachments", None)
 
-            all_rows.append(
-                (
-                    int(USERS[user_id].get("group", "NoGroup")),
-                    str(USERS[user_id]["sis_user_id"]),
-                    assignment_id,
-                    str(data["assignment_name"]),
-                    user_id,
-                    str(pattern.sub("_", USERS[user_id]["name"])),
-                    grader_id,
-                    str(data["current_grade"]),
-                    str(data["current_grader"]),
-                    filename,
-                    code_modified,
-                    str(
-                        get_sublist(data.get("attachments", None)).get(
-                            "display_name", None
-                        )
-                    ),
-                    code,
-                )
+            await cache_attachments(
+                attachments, submission_id, session=session, conn=conn
             )
 
-        if all_rows:
-            try:
-                logger.debug(f"Awaiting DB executioins of all_rows")
-                await conn.executemany(
-                    """
-                    INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    all_rows,
-                )
-                await conn.commit()
-                logger.debug(f"Writing rows to db")
-            except sqlite3.InterfaceError as err:
-                logger.debug(f"Error {err} in this: {all_rows}")
+            if attachments is None:
+                logger.debug(f"No attachment discovered on {user_id=} {assignment_id=} - probably no submission")
+
+            subm = (
+                submission_id,
+                assignment_id,
+                str(data["assignment_name"]),
+                grader_id,
+                data["current_grade"],
+                data["current_grader"],
+                int(USERS[user_id].get("group", "NoGroup")),
+                str(USERS[user_id]["sis_user_id"]),
+                str(name_pattern.sub("_", USERS[user_id]["name"])),
+                user_id,
+            )
+
+            logger.debug(f"Inserting into db: {subm}")
+
+            await conn.execute(
+                """INSERT INTO submissions VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                subm,
+            )
+            await conn.commit()
+            logger.debug(f"To db: {subm}")
     logger.debug(f"Skipped {stats['skipped']}")
+
 
 
 async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
     """
-    Consume the urls list, and write them to file
+    Consume the urls list, fetch all submissions, store in sql
     """
     async with aiohttp.ClientSession(headers=headers) as session:
         async with aiosqlite.connect(DB, timeout=30) as conn:
@@ -309,9 +377,8 @@ async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
             for _ in range(len(URLS)):
                 url = URLS.pop()
                 tasks.append(
-                    get_specific_data(url=url, session=session, conn=conn, **kwargs)
+                    cache_submissions(url=url, session=session, conn=conn, **kwargs)
                 )
-            logger.debug(f"Awaiting tasks: {tasks}")
             await asyncio.gather(*tasks)
 
 
@@ -332,7 +399,7 @@ async def fetch_sections():
         if not group_nr:
             # skip groups that are not member of sections
             continue
-        group_nr = group_nr.split('-')[-1]
+        group_nr = group_nr.split("-")[-1]
         if "students" not in group:  # This may be unnecessary
             continue
         for user in group["students"]:
@@ -349,6 +416,8 @@ async def update_users():
     global USERS
     # Yeah, uses global here
     USERS = await fetch_sections()
+    with open("users.json", "w") as f:
+        json.dump(USERS, f)
 
 
 def clear_table():
@@ -358,7 +427,6 @@ def clear_table():
     """
     with closing(sqlite3.connect(DB)) as conn:
         with closing(conn.cursor()) as cursor:
-            cursor.execute("DELETE FROM cache")
             cursor.execute("DELETE FROM info")
             cursor.execute("INSERT INTO info VALUES (?)", (0,))
             conn.commit()
@@ -386,9 +454,10 @@ def set_last_update_time():
 def db_validator():
     with closing(sqlite3.connect(DB)) as conn:
         try:
-            cache, info = (
-                conn.execute("SELECT * FROM cache").fetchone(),
+            info, submissions, attachments = (
                 conn.execute("SELECT * FROM info").fetchone(),
+                conn.execute("SELECT * FROM submissions").fetchone(),
+                conn.execute("SELECT * FROM attachments").fetchone(),
             )
         except sqlite3.OperationalError as err:
             logger.debug(f"Db error, not setup tables - {err}")
@@ -396,7 +465,7 @@ def db_validator():
             create_tables()
             return False
 
-    return bool(cache)
+    return bool(submissions)
 
 
 def db_setup():
@@ -424,14 +493,21 @@ async def main():
 
     # Make the urls list:
     pages = get_n_pages(head)
+
+    # DEBUG reduce pageload:
+    # pages = 25
+    # logger.debug(f"DEBUGGIN _ REDUCING PAGELOAD! PAGES LOADED {pages}!")
+
     logger.debug(f"N pages from gradebook: {pages}")
     URLS = set(make_urls(head, pages))
 
     # Fetch info about users
     logger.debug(f"Updating USERS")
+
     await update_users()
     logger.debug(f"Finished updating USERS")
     logger.debug(f"Starting fetching all submissions ")
+
     await fetch_all_paginated_pages(urls=URLS)
     logger.debug(f"Finished fetching all submissions ")
 
@@ -446,8 +522,9 @@ def build_assignments():
 def reset_db():
     """ Resets db """
     with closing(sqlite3.connect(DB)) as conn:
-        conn.execute("DROP TABLE cache")
         conn.execute("DROP TABLE info")
+        conn.execute("DROP TABLE submissions")
+        conn.execute("DROP TABLE attachments")
 
 
 if __name__ == "__main__":

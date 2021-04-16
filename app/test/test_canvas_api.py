@@ -29,46 +29,107 @@ def session_cache():
     connection.close()
 
 @pytest.fixture
-def setup_db(session_cache):
+def setup_small_db(session_cache):
     session_cache.execute(
-                """CREATE TABLE cache
-                (group_nr INTEGER,
-                sis_user_id TEXT,
-                assignment_id INTEGER,
-                assignment_name TEXT,
-                user_id INTEGER,
-                user_name TEXT,
-                grader_id INTEGER,
-                current_grade TEXT,
-                current_grader TEXT,
-                filename TEXT,
-                display_name TEXT,
-                url TEXT,
-                code BLOB)
-                """)
-    values = [
-        (
-            1,
-            "mir101",
-            123,
-            "Temaoppgave_1",
-            4040,
-            "Landrok Kire",
-            431,
-            "complete",
-            "Saerdna Kire",
-            "1243_mir101.py",
-            "12341_mir101.py",
-            "https://mitt.uib.no/files/3086939/download?download_frd=1&verifier=OD3PPfKOhdoWH6a81wUem5kzTrDEr",
-        )
-    ]
-    session_cache.executemany(
+        """CREATE TABLE small
+        (latest_fetch INTEGER)"""
+    )
+
+    session_cache.connection.commit()
+    session_cache.execute("INSERT submissions VALUES(submission_id=:sub", {"sub": 123})
+    session_cache.connection
+
+    assert 23 == session_cache.execute("SELECT * from submissions").fetchall()
+
+
+
+
+@pytest.fixture
+def setup_db(session_cache):
+    """ Setup db as done in canvas api
+        three tables (attachments, info, submissions)
+    """
+    session_cache.execute(
+        """CREATE TABLE info
+        (latest_fetch INTEGER)"""
+    )
+
+    # Table for submissions -
+    session_cache.execute(
+        """CREATE TABLE submissions
+        (submission_id INTEGER,
+        assignment_id INTEGER,
+        assignment_name TEXT,
+        grader_id INTEGER,
+        current_grade TEXT,
+        current_grader TEXT,
+        group_nr INTEGER,
+        sis_user_id TEXT,
+        user_name TEXT,
+        user_id INTEGER
+        )"""
+    )
+
+    # Another table for attachments - for multiple attachments
+    session_cache.execute(
+        """CREATE TABLE attachments
+        (displayname TEXT,
+        filename TEXT,
+        modified_at REAL,
+        code BLOB,
+        submission_id INTEGER,
+        FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
+        )"""
+    )
+    session_cache.connection.commit()
+    # Insert into submissions
+    submission = {"submission_id": 123,
+              "assignment_id": 456,
+              "assignment_name": "Temaoppgave 1",
+              "grader_id": 999,
+              "current_grade": "complete",
+              "current_grader": "Black Knight",
+              "group_nr": 1,
+              "sis_user_id": "mir111",
+              "user_name": "Brian Cohen",
+              "user_id": 444555,
+              }
+
+    session_cache.execute(
         """
-        INSERT INTO cache VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-        values,
+        INSERT INTO submissions VALUES (
+        :submission_id,
+        :assignment_id,
+        :assignment_name,
+        :grader_id,
+        :current_grade,
+        :current_grader,
+        :group_nr,
+        :sis_user_id,
+        :user_name,
+        :user_id)""",
+
+        submission,
     )
     session_cache.connection.commit()
 
+
+@pytest.mark.usefixtures("setup_db")
+def test_basic(session_cache):
+
+    submission = {"submission_id": 123,
+                  "assignment_id": 456,
+                  "assignment_name": "Temaoppgave 1",
+                  "grader_id": 999,
+                  "current_grade": "complete",
+                  "current_grader": "Black Knight",
+                  "group_nr": 1,
+                  "sis_user_id": "mir111",
+                  "user_name": "Brian Cohen",
+                  "user_id": 444555,
+                  }
+
+    assert session_cache.execute("SELECT * FROM submissions").fetchall() == values
 
 @pytest.mark.usefixtures("setup_db")
 def test_basic(session_cache):

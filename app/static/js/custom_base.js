@@ -1,17 +1,18 @@
-function createPythonCode() {
-    getCustomHandler();
+async function createPythonCode() {
     const pythonScript = document.createElement("script");
     const parent = document.getElementById("running");
     pythonScript.type = "text/python";
     
-    pythonScript.append(getCustomHandler());
+    let pre_py = await getCustomHandler()
+    pythonScript.append(pre_py);
     pythonScript.append(editor.getValue());
     parent.appendChild(pythonScript);
 }
 
-function getCustomHandler() {
+async function getCustomHandler() {
     const customHandler = document.getElementById("customHandler");
-    return customHandler.text;
+    let response = await fetch("/js/pre_py.py");
+    return await response.text();
 }
 
 function clearUp() {
@@ -21,7 +22,7 @@ function clearUp() {
     result.textContent = '';
 }
 
-function runCodeInPython() {
+async function runCodeInPython() {
     const orgPrompt = prompt;
     window.prompt = function(msg) {
       const rv = orgPrompt(msg);
@@ -30,7 +31,13 @@ function runCodeInPython() {
       return rv;
     }
     clearUp();
-    createPythonCode();
+    await createPythonCode();
+    
+    // Debuggin
+    const running = document.getElementById("running");
+    console.log("running")
+    console.log(running)
+    
     
     function footScroll(){
       const footerTag = document.querySelector(".footer")

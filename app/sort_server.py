@@ -19,8 +19,13 @@ from pathlib import Path
 from time import ctime
 from .settings import CONFIG, LOGFOLDER, LOGFILENAME, DB, GRADE_ENDPOINT, CANVAS_DOMAIN
 from dotenv import load_dotenv
-from app.tasks import get_assignments, process_files
-from .canvas_api import build_assignments, feedback_grade, db_validator, fetch_endpoint_blocking
+from app.tasks import get_assignments_parsed, process_files
+from .canvas_api import (
+    build_assignments,
+    feedback_grade,
+    db_validator,
+    fetch_endpoint_blocking,
+)
 from requests import get
 import logging
 import sqlite3
@@ -49,32 +54,6 @@ logger = logging.getLogger(__name__)
 SUBMISSION_FOLDER = CONFIG["SUBMISSION_FOLDER"]
 COURSECODE = CONFIG["COURSECODE"]
 
-# Selecting only the newest submissions from each user
-sub_by_group = """
-    SELECT DISTINCT
-    user_name,
-    filename,
-    display_name,
-    assignment_name,
-    table1.sis_user_id,
-    table1.modified_at,
-    table1.user_id,
-    current_grade,
-    code,
-    assignment_id
-    FROM cache table1
-    INNER JOIN
-    (
-    SELECT user_id, max(modified_at) MaxVal
-    FROM cache
-    WHERE group_nr = ? AND assignment_name = ?
-    GROUP BY user_id
-    ) table2
-    ON table1.user_id = table2.user_id
-    AND table1.modified_at = table2.maxval
-    ORDER BY user_name
-"""
-
 
 @app.route("/favicon.ico")
 def favicon():
@@ -89,176 +68,174 @@ def favicon():
 def index():
     return render_template("index.html")
 
-@app.route("/files")
+
+@app.route("/files/")
 def filehandling():
     return render_template("newfile.html")
+
 
 @app.route("/files/<filename>")
 def get_file(filename):
     return render_template("newfile.html", context=filename)
 
 
-
 @app.route(f"/{SUBMISSION_FOLDER}/")
-def get_groups(folder="", group=0):
-    if not db_validator():
-        print("Db has no data - please update from API")
-        abort(500)
+def get_groups():
+    # Find all group_nr
     with sqlite3.connect(DB) as conn:
-        max_groups = conn.execute("SELECT MAX(group_nr) FROM cache").fetchone()[0]
-        assignment_names = conn.execute(
-            "SELECT DISTINCT assignment_name FROM cache ORDER BY assignment_name "
+        conn.row_factory = sqlite3.Row
+        groups = conn.execute(
+            "SELECT DISTINCT group_nr FROM submissions ORDER BY group_nr"
         ).fetchall()
-        assignment_names = {
-            name[0]: {"href": name[0].strip().lower().replace(" ", "_")}
-            for name in assignment_names
-        }
-        return render_template(
-            "groups.html",
-            context={
-                "coursecode": COURSECODE,
-                "max_groups": max_groups,
-                "assignment_names": assignment_names,
-            },
-        )
-
-
-@app.route(f"/{SUBMISSION_FOLDER}/<int:group>/")
-def get_group(group=1):
-    with sqlite3.connect(DB) as conn:
-        assignment_names = conn.execute(
-            "SELECT DISTINCT assignment_name FROM cache ORDER BY assignment_name "
-        ).fetchall()
-        submissions = conn.execute(
-            """SELECT
-                 group_nr, assignment_name, current_grade, filename
-                 FROM cache WHERE group_nr=?
-                 ORDER BY assignment_name
-            """,
-            (group,),
-        ).fetchall()
-        assignment_names = [name[0] for name in assignment_names]
-        return render_template(
-            "submissions.html",
-            context={
-                "coursecode": COURSECODE,
-                "submissions": submissions,
-                "assignment_names": assignment_names,
-            },
-        )
-
-
-@app.route(f"/{SUBMISSION_FOLDER}/<int:group>/<assignment_name>/")
-def get_submissions_by_ass(group=1, assignment_name=""):
-    with sqlite3.connect(DB) as conn:
-        completed = conn.execute(
-            """SELECT
-                 COUNT(*) FROM cache WHERE group_nr = ? AND current_grade = 'complete'
-            """,
-            (group,),
-        ).fetchall()
-        submissions = conn.execute(
-            sub_by_group,
-            (group, assignment_name),
-        ).fetchall()
-        submissions = [attribute_submission(subm) for subm in submissions]
-
-        return render_template(
-            "group_submissions.html",
-            context={
-                "assignment_name": assignment_name,
-                "group": group,
-                "coursecode": COURSECODE,
-                "submissions": submissions,
-            },
-        )
-
-
-@app.route(f"/{SUBMISSION_FOLDER}/<int:group>/<assignment_name>/<int:index>/")
-@app.route(
-    f"/{SUBMISSION_FOLDER}/<int:group>/<assignment_name>/<int:index>/<filename>/"
-)
-def get_submission(group=1, assignment_name=None, index=None, filename=None):
-    def is_next_index(sub):
-        return index + 1 < len(sub)
-
-    def is_previous_index(sub):
-        return index - 1 != 0
-
-    pdf = get_assignments().get(
-        assignment_name.replace(" ", "_"),
-        f"Please copy {assignment_name}.pdf to pdf-folder",
+    return render_template(
+        "table_view.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": "Groups",
+            "groups": groups,
+        },
     )
-    if not filename:
-        with sqlite3.connect(DB) as conn:
-            submissions = conn.execute(
-                sub_by_group,
-                (group, assignment_name),
-            ).fetchall()
-            submissions = [attribute_submission(subm) for subm in submissions]
-            submission = submissions[index - 1]
 
-            sec_attempt = get_second_attempts(submission["sis_user_id"], assignment_name)
-            final_org_submission = get_final_submission(submission["sis_user_id"], assignment_name)
 
-            return render_template(
-                "fileviewer.html",
-                context={
-                    "index": {
-                        "n": index,
-                        "prev": is_previous_index(submissions),
-                        "next": is_next_index(submissions),
-                    },
-                    "code": submission["code"],
-                    "sis_user_id": submission["sis_user_id"],
-                    "user_id": submission["user_id"],
-                    "assignment_id": submission["assignment_id"],
-                    "group_nr": group,
-                    "assignment_name": submission["assignment_name"],
-                    "second_attempt": sec_attempt,
-                    "final_org_submission": final_org_submission,
-                    "tasks": Markup(pdf),
-                    "pdf": assignment_name.replace(" ", "_"),
-                },
-            )
+@app.route(f"/{SUBMISSION_FOLDER}/<int:group_nr>/")
+def get_assignments(group_nr):
+    # Find all assignments in group_nr
+    with sqlite3.connect(DB) as conn:
+        conn.row_factory = sqlite3.Row
+        assignments = conn.execute(
+            "SELECT DISTINCT group_nr, assignment_id, assignment_name FROM submissions WHERE group_nr = ? ORDER BY assignment_name",
+            (group_nr,),
+        ).fetchall()
+    return render_template(
+        "table_view.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": "Assignments",
+            "assignments": assignments,
+        },
+    )
 
+
+@app.route(f"/{SUBMISSION_FOLDER}/<int:group_nr>/<int:assignment_id>/")
+def get_submissions(group_nr, assignment_id):
+    # Find the submissions in the assignment_id and group_nr
+    with sqlite3.connect(DB) as conn:
+        conn.row_factory = sqlite3.Row
+        submissions = conn.execute(
+            """SELECT DISTINCT group_nr,
+            assignment_id, assignment_name, user_name, submission_id, sis_user_id
+            FROM submissions WHERE group_nr = ? AND assignment_id = ?
+            ORDER BY user_name
+            """,
+            (group_nr, assignment_id),
+        ).fetchall()
+    return render_template(
+        "table_view.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": f"Submissions - {submissions[0]['assignment_name']}",
+            "submissions": submissions,
+        },
+    )
+
+
+@app.route(f"/{SUBMISSION_FOLDER}/<int:group_nr>/<int:assignment_id>/<int:submission_id>/")
+def get_attachments(group_nr, assignment_id, submission_id):
+    # Find the attachments in the given submission_id
+    with sqlite3.connect(DB) as conn:
+        conn.row_factory = sqlite3.Row
+        attachments = conn.execute(
+            """SELECT DISTINCT filename, displayname, modified_at
+            FROM submissions
+            JOIN attachments
+            ON submissions.submission_id = attachments.submission_id
+            WHERE group_nr = ? AND assignment_id = ? AND submissions.submission_id = ?
+            GROUP BY modified_at
+            """,
+            (group_nr, assignment_id, submission_id),
+        ).fetchall()
+    if len(attachments) == 1:
+        # No more than one file handed in, open that immediately
+        return redirect(f"/fileviewer/{group_nr}/{assignment_id}/{submission_id}/{attachments[0]['filename']}/")
+
+    return render_template(
+        "table_view.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": "Attachments",
+            "attachments": attachments,
+            "base": locals(),
+        },
+    )
+
+
+@app.route(
+    "/fileviewer/<int:group_nr>/<int:assignment_id>/<int:submission_id>/<string:filename>/"
+)
+def fileviewer(group_nr, assignment_id, submission_id, filename):
+    # Find the text in the given attachment filename
+    with sqlite3.connect(DB) as conn:
+        conn.row_factory = sqlite3.Row
+        content = conn.execute(
+            """SELECT DISTINCT * FROM submissions
+            JOIN attachments
+            ON submissions.submission_id = attachments.submission_id
+            WHERE group_nr = ? AND assignment_id = ? AND submissions.submission_id = ? AND attachments.filename = ?
+            """,
+            (group_nr, assignment_id, submission_id, filename),
+        ).fetchone()
+
+        # Prev next doing it the sql way
+        submissions = conn.execute(
+            "SELECT DISTINCT * FROM submissions WHERE group_nr = ? AND assignment_id = ? ORDER BY user_name",
+            (group_nr, assignment_id),
+        ).fetchall()
+
+        index = [n for n, keyw in enumerate(submissions) if keyw['submission_id'] == submission_id][0]
+        # Continuing prev/next
+        prev_sub = submissions[(index-1) % len(submissions)]['submission_id']
+        next_sub = submissions[(index+1) % len(submissions)]['submission_id']
+
+        assignment_name = content['assignment_name'].replace(" ", "_")
+        pdf = get_assignments_parsed().get(
+            assignment_name,
+            f"please copy {assignment_name}.pdf to pdf-folder",
+        )
+
+    return render_template(
+        # )
+        "fileviewer2.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": "File",
+            "content": content,
+            "index": index,
+            "prev": prev_sub,
+            "next": next_sub,
+            "tasks": Markup(pdf),
+            "pdf": assignment_name,
+        },
+    )
+
+
+@app.route("/user/<int:user_id>/")
+def all_users_submissions(user_id):
+    # Find all the submissions of the user_id
     with sqlite3.connect(DB) as conn:
         submissions = conn.execute(
-            sub_by_group,
-            (group, assignment_name),
+            """SELECT DISTINCT * FROM submissions
+            WHERE user_id = ?
+            """,
+            (user_id,),
         ).fetchall()
-        submissions = [attribute_submission(subm) for subm in submissions]
-        submission = submissions[index - 1]
-        code, sis_user_id, group_nr = conn.execute(
-            """SELECT
-                code, sis_user_id, group_nr FROM cache
-                WHERE group_nr = ? AND assignment_name = ? AND filename = ?
-                """,
-            (group, assignment_name, filename),
-        ).fetchone()
-        sec_attempt = get_second_attempts(submission["sis_user_id"], assignment_name)
-        final_org_submission = get_final_submission(submission["sis_user_id"], assignment_name)
-
-        return render_template(
-            "fileviewer.html",
-            context={
-                "index": {
-                    "n": index,
-                    "prev": is_previous_index(submissions),
-                    "next": is_next_index(submissions),
-                },
-                "code": code,
-                "user_id": submission["user_id"],
-                "assignment_id": submission["assignment_id"],
-                "sis_user_id": sis_user_id,
-                "group_nr": group_nr,
-                "assignment_name": assignment_name,
-                "second_attempt": sec_attempt,
-                "final_org_submission": final_org_submission,
-                "tasks": Markup(pdf),
-                "pdf": assignment_name.replace(" ", "_"),
-            },
-        )
+    return render_template(
+        "user.html",
+        context={
+            "coursecode": COURSECODE,
+            "page_name": "User Submissions",
+            "attachments": submissions,
+        },
+    )
 
 
 @app.route("/pdfs/<filename>")
@@ -268,16 +245,21 @@ def open_pdf(filename):
         filename + ".pdf",
     )
 
+
 @app.route("/diff/<sis_user_id>/<second_attempt_name>/")
 def get_diff_html(sis_user_id, second_attempt_name):
     assignment_name = second_attempt_name.replace("Egenretting", "").strip()
     try:
-        sec_attempt = get_second_attempts(sis_user_id, assignment_name)[1].split('\n')
+        sec_attempt = get_second_attempts(sis_user_id, assignment_name)[1].split("\n")
     except TypeError:
         abort(404)
 
-    final_org_submission = get_final_submission(sis_user_id, assignment_name)[1].split('\n')
-    diff = HtmlDiff(wrapcolumn=90).make_table(final_org_submission, sec_attempt, context=True, numlines=5)
+    final_org_submission = get_final_submission(sis_user_id, assignment_name)[1].split(
+        "\n"
+    )
+    diff = HtmlDiff(wrapcolumn=90).make_table(
+        final_org_submission, sec_attempt, context=True, numlines=5
+    )
     header_a, header_b = assignment_name, second_attempt_name
     context = {
         "header_a": header_a,
@@ -287,6 +269,7 @@ def get_diff_html(sis_user_id, second_attempt_name):
 
     return render_template("diff.html", context=context)
 
+
 @app.route("/update/")
 def update_from_api():
     print("Updating...")
@@ -294,14 +277,15 @@ def update_from_api():
     process_files()
     return "Updated submissions!"
 
+
 @app.route("/get_submission_status/<ass_id>/<user_id>")
 def get_submission_status(ass_id, user_id):
     # /api/v1/courses/:course_id/assignments/:assignment_id/submissions/:user_id
     endpoint = f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/{ass_id}/submissions/{user_id}"
     params = {"include": "submission_comments"}
     resp = fetch_endpoint_blocking(endpoint, params)
-    grade = resp['entered_grade']
-    return grade if grade is not None else 'Not graded'
+    grade = resp["entered_grade"]
+    return grade if grade is not None else "Not graded"
 
 
 @app.route("/put-canv", methods=["POST"])
@@ -321,23 +305,6 @@ def put_canv():
         return f"Received status: {feedback_grade(params, endpoint)}"
 
 
-
-def attribute_submission(sequence: tuple) -> dict:
-    submission = {
-        "user_name": sequence[0],
-        "filename": sequence[1],
-        "display_name": sequence[2],
-        "assignment_name": sequence[3],
-        "sis_user_id": sequence[4],
-        "modified_at": sequence[5],
-        "user_id": sequence[6],
-        "current_grade": sequence[7],
-        "code": sequence[8],
-        "assignment_id": sequence[9],
-    }
-    return submission
-
-
 def get_final_submission(sis_user_id, assignment_name):
     assignment_name = assignment_name.replace("Egenretting", "").strip()
     with sqlite3.connect(DB) as conn:
@@ -354,8 +321,10 @@ def get_final_submission(sis_user_id, assignment_name):
               ON t1.sis_user_id = t2.sis_user_id
               AND t1.modified_at = t2.newest
               """,
-            (assignment_name, sis_user_id),).fetchone()
+            (assignment_name, sis_user_id),
+        ).fetchone()
         return submission
+
 
 def get_second_attempts(sis_user_id, assignment_name):
     with sqlite3.connect(DB) as conn:
@@ -372,13 +341,10 @@ def get_second_attempts(sis_user_id, assignment_name):
               ON t1.sis_user_id = t2.sis_user_id
               AND t1.modified_at = t2.newest
           """,
-            ('Egenretting ' + assignment_name, sis_user_id),
+            ("Egenretting " + assignment_name, sis_user_id),
         ).fetchall()
         try:
             second_attempt = submissions[-1]
         except IndexError:
             second_attempt = None
         return second_attempt
-
-
-

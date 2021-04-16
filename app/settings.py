@@ -22,12 +22,15 @@ logging.basicConfig(
 )
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s: %(message)s")
 rfh = handlers.RotatingFileHandler(
-    "logs/main.log", backupCount=2, maxBytes=1000000
+    "logs/main.log", backupCount=5, maxBytes=10000000
 )
 rfh.setFormatter(formatter)
-logging.getLogger("").addHandler(rfh)
-# Reduce logging from werkzeug
+logging.getLogger().addHandler(rfh)
+
+# Reduce logging from imported modules that logs
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
+logging.getLogger("urllib").setLevel(logging.WARNING)
 
 
 with open(SEMESTER_FILE) as f:

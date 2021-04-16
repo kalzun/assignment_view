@@ -158,3 +158,15 @@ tbody:nth-child(2n) {
     left: 0;
 }
 
+span.group-loop-index {
+  color: #6b675a;
+  margin-left: 0;
+}
+
+p.modified-at {
+  color: #6b675a;
+  font-size: 12px;
+
+}
+
+

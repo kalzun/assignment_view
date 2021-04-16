@@ -20,25 +20,22 @@
       <div class="notification is-light">
     <nav class="level">
         <div class="level-left">
-              Student: <input class="input" type="text" type="text" value="{{ context.sis_user_id }}" id="studentcode" readonly>
+              Student: <input class="input" type="text" type="text" value="{{ context.content['sis_user_id'] }}" id="studentcode" readonly>
           <button class="button is-primary is-light" onclick="copyStudentcode()">Copy to clipboard!</button>
           <span id="info-success-copy-code" class="tag is-success is-light invisible">Copied to clipboard!</span>
         </div>
 
-        <a href="/api_submissions/{{ context.group_nr }}/" class="button">Group {{ context.group_nr}}</a>
-        <a href="/api_submissions/{{ context.group_nr }}/{{context.assignment_name}}/" class="button">{{ context.assignment_name }}</a>
+        <a href="/api_submissions/{{ context.content['group_nr'] }}/" class="button">Group {{ context.content['group_nr']}}</a>
+        <a href="/api_submissions/{{ context.content['group_nr'] }}/{{context.content['assignment_id']}}/" class="button">{{ context.content['assignment_name'] }}</a>
+    </nav>
         <div class="cycle-students">
-            {% if context.index.prev %}
-            <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n -1}}" class="button">&lt; Previous</a>
+            {% if context['prev'] %}
+            <a href="/api_submissions/{{context.content['group_nr'] }}/{{context.content['assignment_id'] }}/{{context['prev'] }}" class="button">&lt; Previous</a>
             {% endif %}
-            {% if context.index.next %}
-                <a href="/api_submissions/{{context.group_nr}}/{{context.assignment_name}}/{{context.index.n +1}}" class="button">Next &gt;</a>
-            {% else %}
-                <a href="#" class="button" >Finito!</a>
+            {% if context['next'] %}
+            <a href="/api_submissions/{{context.content['group_nr'] }}/{{context.content['assignment_id'] }}/{{context['next'] }}" class="button">Next &gt;</a>
             {% endif %}
         </div>
-        
-    </nav>
     <nav class="level">
       <div class="level-item">
         <span id="entered-grade" class="tag is-success is-light">Entered grade</span>
@@ -97,15 +94,6 @@
     <button id="files-button" class="button is-primary is-light" onclick="activateModal('files-modal')">Files</button>
   </div>
 
-    {% if context.second_attempt %}
-    <div class="level-item">
-      <a class="button is-primary is-light" href="/api_submissions/{{ context.group_nr }}/{{ context.second_attempt[2] }}/{{ context.index.n }}/{{ context.second_attempt[-1] }}" >Second attempt</a>
-    </div>
-    {% elif context.final_org_submission %}
-    <div class="level-item">
-      <a class="button is-primary is-light" href="/diff/{{context.sis_user_id}}/{{context.assignment_name}}">Differing</a>
-    </div>
-    {% endif %}
 
   <div class="level-right">
     <button class="button is-primary is-light" onclick="runCodeInPython()">Run code!</button>
@@ -113,19 +101,18 @@
 </nav>
 
 
-
 <section class="section">
     <div class="container custom-ace-container">
         <div class="columns ">
             <div id="parent-to-ace" class="column is-three-fifths is-mobile">
                 {% if context %}
-                <code class="python" id="submissioncode">{{ context.code }}</code>
+                <code class="python" id="submissioncode">{{ context.content['code'] }}</code>
                 {% else %}
                 <h1>Could not find file</h1>
                 {% endif %}
             </div>
             <div id="parent-to-ace" class="column is-mobile">
-                <div id="feedback-field" form="save_to_canvas">Feedback to {{ studentcode }}:</div>
+                <div id="feedback-field" form="save_to_canvas">Feedback to {{ context.content['sis_user_id'] }}:</div>
             </div>
         </div>
     </div>
@@ -153,10 +140,8 @@
 <div class="level">
     <div class="level-left"></div>
         <div class="level-right">
-          <div class="" hx-get="/get_submission_status/{{ context.assignment_id }}/{{ context.user_id }}" hx-trigger="load" hx-indicator="#fetch_progressing" hx-target="#entered-grade" hx-swap="innerHTML">
           </div>
             <div style="background-color:#fff">
-              <img id="fetch_progressing" class="htmx-indicator" src="{{url_for('static', filename='img/spinners/puff.svg')}}" />
             </div>
             <form id="save_to_canvas" hx-post="/put-canv" hx-target="this" hx-swap="outerHTML">
             <div class="field is-grouped">
@@ -167,11 +152,8 @@
                     <option value="complete">Godkjent</option>
                   </select>
                   <input type="hidden" name="comment" id="formcomment" />
-                  <input type="hidden" name="user_id" value="{{ context.user_id }}" />
-                  <input type="hidden" name="assignment_id" value="{{ context.assignment_id }}" />
                 </div>
                 <div class="control">
-                    <button class="button is-primary is-light" onclick="getCommentFeedback()">Save to Canvas</button>
                   </div>
                 </div>
             </form>
@@ -187,10 +169,11 @@
   </div>
 </footer>
 
-    <script>
-        var assignment_name = "{{ context.assignment_name }}";
-        var group_n = "{{ context.group_nr }}";
-    </script>
+<script>
+    var assignment_name = "{{ context.assignment_name }}";
+    var group_n = "{{ context.content['group_nr'] }}";
+</script>
+
 <script src="/js/custom_base.js" type="text/javascript" charset="utf-8"></script>
 <script src="/js/fileviewer.js" type="text/javascript" charset="utf-8"></script>
 <script src="/js/clientFileHandler.js" type="text/javascript" charset="utf-8"></script>

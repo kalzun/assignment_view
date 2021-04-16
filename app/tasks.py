@@ -124,7 +124,7 @@ def save_to_file():
         json.dump(pdf_to_text(), f)
 
 
-def get_assignments():
+def get_assignments_parsed():
     with open(TASKS_FILE) as f:
         return json.load(f)
 
