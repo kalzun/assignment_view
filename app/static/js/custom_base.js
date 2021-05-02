@@ -2,7 +2,7 @@ async function createPythonCode() {
     const pythonScript = document.createElement("script");
     const parent = document.getElementById("running");
     pythonScript.type = "text/python";
-    
+
     let pre_py = await getCustomHandler()
     pythonScript.append(pre_py);
     pythonScript.append(editor.getValue());
@@ -32,13 +32,13 @@ async function runCodeInPython() {
     }
     clearUp();
     await createPythonCode();
-    
+
     // Debuggin
     const running = document.getElementById("running");
     console.log("running")
     console.log(running)
-    
-    
+
+
     function footScroll(){
       const footerTag = document.querySelector(".footer")
       footerTag.scrollIntoView(false);
@@ -49,7 +49,7 @@ async function runCodeInPython() {
       callback();
     })(footScroll);
 
-    
+
 }
 
 function copyStudentcode(show = true) {
@@ -68,9 +68,9 @@ function copyStudentcode(show = true) {
       toggleSuccessInfo("info-success-copy-code");
   }
   else {
-      return copyText.value; 
+      return copyText.value;
   }
-} 
+}
 
 function copyStudentsubmission() {
   /* Get the text field */
@@ -85,7 +85,7 @@ function copyStudentsubmission() {
   document.body.removeChild(el);
 
   toggleSuccessInfo("info-success-copy-submission");
-} 
+}
 
 function toggleSuccessInfo(elemid){
   document.getElementById(elemid).classList.toggle("invisible");
@@ -94,7 +94,7 @@ function toggleSuccessInfo(elemid){
     });
   promise.then(
       () => {document.getElementById(elemid).classList.toggle("invisible");}
-  ); 
+  );
 }
 
 function makeKeyForLocalStorage(){
@@ -134,5 +134,3 @@ function getCommentFeedback() {
     formInput = document.getElementById("formcomment");
     formInput.value = comment;
 }
-
-

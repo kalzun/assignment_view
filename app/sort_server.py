@@ -1,35 +1,39 @@
 # from werkzeug.security import safe_join
-import os
-from difflib import HtmlDiff
-import subprocess as subproc
-from flask import (
-    Flask,
-    render_template,
-    send_from_directory,
-    redirect,
-    url_for,
-    safe_join,
-    abort,
-    Markup,
-    request,
-)
-from textwrap import TextWrapper
 import json
-from pathlib import Path
-from time import ctime
-from .settings import CONFIG, LOGFOLDER, LOGFILENAME, DB, GRADE_ENDPOINT, CANVAS_DOMAIN
-from dotenv import load_dotenv
-from app.tasks import get_assignments_parsed, process_files
-from .canvas_api import (
-    build_assignments,
-    feedback_grade,
-    db_validator,
-    fetch_endpoint_blocking,
-)
-from requests import get
 import logging
+import os
 import sqlite3
+import subprocess as subproc
+from difflib import HtmlDiff
+from pathlib import Path
+from textwrap import TextWrapper
+from time import ctime
 from urllib.parse import urljoin
+
+from dotenv import load_dotenv
+from flask import abort
+from flask import Flask
+from flask import Markup
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import safe_join
+from flask import send_from_directory
+from flask import url_for
+from requests import get
+
+from .canvas_api import build_assignments
+from .canvas_api import db_validator
+from .canvas_api import feedback_grade
+from .canvas_api import fetch_endpoint_blocking
+from .settings import CANVAS_DOMAIN
+from .settings import CONFIG
+from .settings import DB
+from .settings import GRADE_ENDPOINT
+from .settings import LOGFILENAME
+from .settings import LOGFOLDER
+from app.tasks import get_assignments_parsed
+from app.tasks import process_files
 
 dotenv_path = Path(__file__) / ".flaskenv"  # Path to .env file
 load_dotenv(dotenv_path)
@@ -139,7 +143,9 @@ def get_submissions(group_nr, assignment_id):
     )
 
 
-@app.route(f"/{SUBMISSION_FOLDER}/<int:group_nr>/<int:assignment_id>/<int:submission_id>/")
+@app.route(
+    f"/{SUBMISSION_FOLDER}/<int:group_nr>/<int:assignment_id>/<int:submission_id>/"
+)
 def get_attachments(group_nr, assignment_id, submission_id):
     # Find the attachments in the given submission_id
     with sqlite3.connect(DB) as conn:
@@ -156,7 +162,9 @@ def get_attachments(group_nr, assignment_id, submission_id):
         ).fetchall()
     if len(attachments) == 1:
         # No more than one file handed in, open that immediately
-        return redirect(f"/fileviewer/{group_nr}/{assignment_id}/{submission_id}/{attachments[0]['filename']}/")
+        return redirect(
+            f"/fileviewer/{group_nr}/{assignment_id}/{submission_id}/{attachments[0]['filename']}/"
+        )
 
     return render_template(
         "table_view.html",
@@ -191,12 +199,16 @@ def fileviewer(group_nr, assignment_id, submission_id, filename):
             (group_nr, assignment_id),
         ).fetchall()
 
-        index = [n for n, keyw in enumerate(submissions) if keyw['submission_id'] == submission_id][0]
+        index = [
+            n
+            for n, keyw in enumerate(submissions)
+            if keyw["submission_id"] == submission_id
+        ][0]
         # Continuing prev/next
-        prev_sub = submissions[(index-1) % len(submissions)]['submission_id']
-        next_sub = submissions[(index+1) % len(submissions)]['submission_id']
+        prev_sub = submissions[(index - 1) % len(submissions)]["submission_id"]
+        next_sub = submissions[(index + 1) % len(submissions)]["submission_id"]
 
-        assignment_name = content['assignment_name'].replace(" ", "_")
+        assignment_name = content["assignment_name"].replace(" ", "_")
         pdf = get_assignments_parsed().get(
             assignment_name,
             f"please copy {assignment_name}.pdf to pdf-folder",

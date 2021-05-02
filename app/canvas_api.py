@@ -1,24 +1,25 @@
-from contextlib import closing
-from dotenv import load_dotenv
-from pathlib import Path
-from typing import IO
-import aiofiles
-import aiohttp
-from aiohttp import ClientResponseError
-import aiosqlite
 import asyncio
 import csv
-from io import BytesIO
 import json
 import logging
 import os
 import re
-import requests as req
 import sqlite3
 import sys
 import tempfile
 import time
+from contextlib import closing
+from io import BytesIO
+from pathlib import Path
+from typing import IO
 from zipfile import ZipFile
+
+import aiofiles
+import aiohttp
+import aiosqlite
+import requests as req
+from aiohttp import ClientResponseError
+from dotenv import load_dotenv
 
 
 logger = logging.getLogger(__name__)
@@ -163,8 +164,14 @@ async def fetch_endpoint(
     return resp
 
 
-async def unzip_file(url: str, submission_id: int, session=aiohttp.ClientSession, conn=aiosqlite.Connection, **kwargs) -> None:
-    """ Download a zip-file, decompress in tmp-folder, read to db """
+async def unzip_file(
+    url: str,
+    submission_id: int,
+    session=aiohttp.ClientSession,
+    conn=aiosqlite.Connection,
+    **kwargs,
+) -> None:
+    """Download a zip-file, decompress in tmp-folder, read to db"""
     async with aiohttp.ClientSession() as session:
         resp = await fetch_endpoint(url, return_json=False, session=session, **kwargs)
         filebyte = await resp.read()
@@ -184,14 +191,16 @@ async def unzip_file(url: str, submission_id: int, session=aiohttp.ClientSession
                         ?,
                         ?,
                         ?)""",
-                        (file.name,
-                         file.name,
-                         file.stat().st_ctime,
-                         content,
-                         submission_id,
-                         ),
+                        (
+                            file.name,
+                            file.name,
+                            file.stat().st_ctime,
+                            content,
+                            submission_id,
+                        ),
                     )
             logger.info(f"Successfully unzipped {tmp_dir.name}")
+
 
 async def cache_attachments(
     attachments: list,
@@ -215,8 +224,10 @@ async def cache_attachments(
         if url is None:
             continue
 
-        if att['size'] == 'null' or att['size'] == None:
-            logger.debug(f"Something wrong during upload, {att['filename']=} not valid. ({att['size']=})")
+        if att["size"] == "null" or att["size"] == None:
+            logger.debug(
+                f"Something wrong during upload, {att['filename']=} not valid. ({att['size']=})"
+            )
             continue
 
         resp = await fetch_endpoint(url, return_json=False, session=session, **kwargs)
@@ -237,12 +248,13 @@ async def cache_attachments(
                 ?,
                 ?,
                 ?)""",
-                (att.get("display_name", None),
-                 att.get("filename", None),
-                 att.get("modified_at", None),
-                 code,
-                 submission_id,
-                 ),
+                (
+                    att.get("display_name", None),
+                    att.get("filename", None),
+                    att.get("modified_at", None),
+                    code,
+                    submission_id,
+                ),
             )
             await conn.commit()
 
@@ -340,7 +352,9 @@ async def cache_submissions(
             )
 
             if attachments is None:
-                logger.debug(f"No attachment discovered on {user_id=} {assignment_id=} - probably no submission")
+                logger.debug(
+                    f"No attachment discovered on {user_id=} {assignment_id=} - probably no submission"
+                )
 
             subm = (
                 submission_id,
@@ -364,7 +378,6 @@ async def cache_submissions(
             await conn.commit()
             logger.debug(f"To db: {subm}")
     logger.debug(f"Skipped {stats['skipped']}")
-
 
 
 async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
@@ -520,7 +533,7 @@ def build_assignments():
 
 
 def reset_db():
-    """ Resets db """
+    """Resets db"""
     with closing(sqlite3.connect(DB)) as conn:
         conn.execute("DROP TABLE info")
         conn.execute("DROP TABLE submissions")

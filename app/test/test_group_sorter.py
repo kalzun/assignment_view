@@ -1,16 +1,16 @@
-import pytest
 from dataclasses import dataclass
 from pathlib import Path
+
+import pytest
+
 import app.group_sorter as group_sorter
-from ..group_sorter import (
-    find_group,
-    get_path_file_of_student,
-    unzip_file,
-    copy_files_to_folder,
-    get_submission_name,
-    get_newest_file,
-    build_group_overview,
-)
+from ..group_sorter import build_group_overview
+from ..group_sorter import copy_files_to_folder
+from ..group_sorter import find_group
+from ..group_sorter import get_newest_file
+from ..group_sorter import get_path_file_of_student
+from ..group_sorter import get_submission_name
+from ..group_sorter import unzip_file
 
 group4 = {
     "tiw012",
@@ -195,6 +195,7 @@ def test_build_group_overview(monkeypatch):
     # assert group_sorter.GROUPS == {0: {1,2}, 1: {1, 2}, 2: {1, 2}, 3: {1, 2}, 4: {1, 2}}
     assert build_group_overview() == {1: {1, 2}, 2: {1, 2}, 3: {1, 2}, 4: {1, 2}}
 
+
 def test_build_group_overview_two_groups(monkeypatch):
     def mock_find_group(*args):
         # A set of Studentcodes
@@ -209,19 +210,17 @@ def test_build_group_overview_two_groups(monkeypatch):
 
     assert build_group_overview() == {1: {1, 2}, 2: {3, 4}}
 
+
 def test_build_group_overview_realcodes(monkeypatch):
     def mock_find_group(*args):
         # A set of Studentcodes
         if args[0] == 2:
             return set((3, 4))
         else:
-            return set(('mir010','mir010', 'mir011'))
+            return set(("mir010", "mir010", "mir011"))
 
     monkeypatch.setitem(group_sorter.CONFIG, "N_OF_GROUPS", 2)
     monkeypatch.setattr(group_sorter.Groups, "all", {})
     monkeypatch.setattr(group_sorter, "find_group", mock_find_group)
 
-    assert build_group_overview() == {1: {'mir010', 'mir011'}, 2: {3, 4}}
-
-
-
+    assert build_group_overview() == {1: {"mir010", "mir011"}, 2: {3, 4}}

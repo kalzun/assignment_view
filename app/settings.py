@@ -1,7 +1,7 @@
+import json
 import logging
 from logging import handlers
 from pathlib import Path
-import json
 
 
 # Contains the coursecode e.g.
@@ -21,9 +21,7 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s: %(message)s")
-rfh = handlers.RotatingFileHandler(
-    "logs/main.log", backupCount=5, maxBytes=10000000
-)
+rfh = handlers.RotatingFileHandler("logs/main.log", backupCount=5, maxBytes=10000000)
 rfh.setFormatter(formatter)
 logging.getLogger().addHandler(rfh)
 
@@ -43,6 +41,4 @@ CONFIG = {
     "SUBMISSION_FOLDER": "api_submissions",
 }
 
-GRADE_ENDPOINT = (
-    f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/"  # assignment_id /submissions
-)
+GRADE_ENDPOINT = f"{CANVAS_DOMAIN}/courses/{CONFIG['COURSE_ID']}/assignments/"  # assignment_id /submissions

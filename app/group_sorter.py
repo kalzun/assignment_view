@@ -1,16 +1,17 @@
-from pathlib import Path
-from time import time, ctime
-from zipfile import ZipFile
 import csv
 import json
-import logging
 import logging.config
 import re
 import shutil
 import tempfile
-from dataclasses import dataclass, field
-from itertools import zip_longest
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
+from itertools import zip_longest
+from pathlib import Path
+from time import ctime
+from time import time
+from zipfile import ZipFile
 
 
 # csvfile = '2020-09-03T1057_Karakterer-INFO132.csv'
@@ -26,6 +27,7 @@ positions = {
 
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Groups:

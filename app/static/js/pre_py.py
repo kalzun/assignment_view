@@ -1,6 +1,7 @@
-from browser.local_storage import storage
 import _io
 import os
+
+from browser.local_storage import storage
 
 
 def mock_os_remove(path):
@@ -15,7 +16,6 @@ def mock_exists(path):
 def mock_rename(src, dst):
     if mock_exists(src):
         storage[dst] = storage.pop(src)
-
 
 
 class MockFile(_io.TextIOWrapper):

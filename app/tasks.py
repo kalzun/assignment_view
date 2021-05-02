@@ -1,15 +1,18 @@
-from pathlib import Path
-import re
-import pdfminer
-from pdfminer.high_level import extract_text, extract_text_to_fp
-import pytest
 import json
-from io import StringIO
-import requests as req
 import logging
-from dotenv import load_dotenv
 import os
+import re
 import time
+from io import StringIO
+from pathlib import Path
+
+import pdfminer
+import pytest
+import requests as req
+from dotenv import load_dotenv
+from pdfminer.high_level import extract_text
+from pdfminer.high_level import extract_text_to_fp
+
 from .utils.decorators import timeit
 
 # Reduce a heavy logging pdfminer...
@@ -38,7 +41,7 @@ def get_pdfs():
     return pdfs
 
 
-def fetch_files_externally(url='', assignment_name="innlevering"):
+def fetch_files_externally(url="", assignment_name="innlevering"):
     """
     Downlad pdfs (assignment instructions) to local folder.
     assignment_name is part of the name of the files the lecture sets it as.
@@ -71,10 +74,14 @@ def fetch_files_externally(url='', assignment_name="innlevering"):
             with open(Path(PDF_FOLDER) / Path(filename), "wb") as fout:
                 fout.write(fileresp.content)
 
-            log_time_used(f"Downloading {filename} from {d['url']}", time.perf_counter() - t1)
+            log_time_used(
+                f"Downloading {filename} from {d['url']}", time.perf_counter() - t1
+            )
+
 
 def log_time_used(operation: str, spent: float):
-    logger.debug(f'{operation} - Time spent: [{spent}] seconds.)')
+    logger.debug(f"{operation} - Time spent: [{spent}] seconds.)")
+
 
 def rename_files():
     # Folders are made out of the Temaoppgave_1-structure, while
