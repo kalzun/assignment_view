@@ -17,10 +17,11 @@ def create_app(test_config=None):
         static_url_path="",
         static_folder="static",
         template_folder="templates",
+        root_path="app",
     )
     # Contains the coursecode e.g.
     SEMESTER_FILE = "semester.json"
-    with open(SEMESTER_FILE) as f:
+    with app.open_resource(SEMESTER_FILE) as f:
         SETTINGS = json.load(f)
 
     logging.getLogger(__name__)
@@ -36,7 +37,6 @@ def create_app(test_config=None):
 
     app.config.from_mapping(
         FLASK_ENV="development",
-        FLASK_APP=__name__,
         FLASK_DEBUG=True,
         TESTING=True,
         TEMPLATES_AUTO_RELOAD=True,
@@ -46,15 +46,17 @@ def create_app(test_config=None):
     )
     app.config.update(CONFIG)
 
+    # SETUP LOGGING:
+
     logger = logging.getLogger(__name__)
     logging.basicConfig(
-        filename=f"{app.config['LOGFOLDER']}/{app.config['LOGFILENAME']}",
+        filename=f"{app.root_path}/{app.config['LOGFOLDER']}/{app.config['LOGFILENAME']}",
         format="%(asctime)s - %(name)s - %(levelname)s: %(message)s",
         level=logging.DEBUG,
     )
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s: %(message)s")
     rfh = handlers.RotatingFileHandler(
-        "logs/main.log", backupCount=5, maxBytes=10000000
+        f"{app.root_path}/logs/main.log", backupCount=5, maxBytes=10000000
     )
     rfh.setFormatter(formatter)
     logging.getLogger().addHandler(rfh)
@@ -64,6 +66,12 @@ def create_app(test_config=None):
     logging.getLogger("aiosqlite").setLevel(logging.WARNING)
     logging.getLogger("urllib").setLevel(logging.WARNING)
 
+    # Register commands
+    from . import db
+
+    db.init_app(app)
+
+    # Register views:
     from app.sort_server import view, sub_view
 
     app.register_blueprint(view)

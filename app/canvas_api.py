@@ -22,6 +22,8 @@ from aiohttp import ClientResponseError
 from dotenv import load_dotenv
 from flask import current_app
 
+from .db import get_db
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -67,6 +69,7 @@ def create_tables():
     """
     Make table for db
     """
+
     with closing(sqlite3.connect(DB)) as conn:
         with closing(conn.cursor()) as cursor:
 
@@ -530,14 +533,6 @@ async def main():
 
 def build_assignments():
     asyncio.run(main())
-
-
-def reset_db():
-    """Resets db"""
-    with closing(sqlite3.connect(DB)) as conn:
-        conn.execute("DROP TABLE info")
-        conn.execute("DROP TABLE submissions")
-        conn.execute("DROP TABLE attachments")
 
 
 if __name__ == "__main__":
