@@ -2,7 +2,9 @@ import json
 import logging
 import os
 import re
+import sqlite3
 import time
+from contextlib import closing
 from io import StringIO
 from pathlib import Path
 
@@ -12,8 +14,6 @@ import requests as req
 from dotenv import load_dotenv
 from pdfminer.high_level import extract_text
 from pdfminer.high_level import extract_text_to_fp
-
-from .utils.decorators import timeit
 
 # Reduce a heavy logging pdfminer...
 logging.getLogger("pdfminer").setLevel(logging.WARNING)
@@ -33,6 +33,21 @@ load_dotenv(dotenv_path=env_path)
 TOKEN = os.getenv("TOKEN")
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
+
+
+def find_linked_assignments(ass_name: str) -> tuple:
+    """
+    Find the linked assignment_name ass_name to a second assignment, where
+    students have been able to hand in a second try. Instructure does not link
+    these automatically. Naming of the assignment is up to instructors at the course,
+    so this will be error_prone.
+    Return tuple of assignment_ids.
+    """
+    # with closing(sqlite3.connect(DB)) as conn:
+    # with closing(conn.cursor()) as cursor:
+    res = conn.execute("""SELECT assignment_name FROM submissions""").fetchone()
+
+    return res
 
 
 def get_pdfs():

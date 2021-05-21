@@ -20,7 +20,7 @@ import aiosqlite
 import requests as req
 from aiohttp import ClientResponseError
 from dotenv import load_dotenv
-
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -43,7 +43,6 @@ sections_endpoint = (
 )
 api_submission_folder = "api_submissions"
 
-DB = "sqlite.db"
 USERS = {}
 URLS = set()
 
@@ -52,6 +51,7 @@ stats = {
     "unique": set(),
     "last_update_time": 0,
 }
+
 
 # platform specific WINDOWS:
 # https://github.com/encode/httpx/issues/914#issuecomment-622586610

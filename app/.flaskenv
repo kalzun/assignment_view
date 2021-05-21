@@ -1,5 +1,4 @@
 FLASK_ENV=development
-FLASK_APP=sort_server
 FLASK_DEBUG=True
 TESTING=True
 TEMPLATES_AUTO_RELOAD=True
