@@ -99,7 +99,7 @@ function toggleSuccessInfo(elemid){
 
 function makeKeyForLocalStorage(){
     let code = copyStudentcode(false);
-    return group_n + assignment_name + code;
+    return `${group_n}_${assignment_id}_${code}`;
 }
 
 function tempStoreFeedback() {
@@ -107,9 +107,18 @@ function tempStoreFeedback() {
     localStorage.setItem(makeKeyForLocalStorage(), tmpFeed);
 }
 
+async function fetching_comment(assId, userId){
+  let resp = await fetch(`/previous_comments/${assId}/${userId}`);
+  let comment = await resp.text()
+  feedback.setValue(comment);
+}
+
+
 function loadTempStoredFeedback() {
     // let feedback = document.getElementById("feedback-field");
     rv = localStorage.getItem(makeKeyForLocalStorage());
+    console.log("Should return")
+    console.log(rv)
     if (rv)
         feedback.setValue(rv);
 }

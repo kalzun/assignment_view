@@ -36,11 +36,14 @@ from .tasks import process_files
 view = Blueprint("view", __name__)
 sub_view = Blueprint("sub_view", __name__, url_prefix="/api_submissions")
 
+logger = logging.getLogger(__name__)
+
 
 @view.route("/favicon.ico")
 def favicon():
+    logger.debug("From faviocon")
     return send_from_directory(
-        os.path.join(app.root_path, "static/img"),
+        os.path.join(current_app.root_path, "static/img"),
         "favicon.ico",
         mimetype="image/vnd.microsoft.icon",
     )
@@ -276,6 +279,23 @@ def get_submission_status(ass_id, user_id):
     resp = fetch_endpoint_blocking(endpoint, params)
     grade = resp["entered_grade"]
     return grade if grade is not None else "Not graded"
+
+
+@view.route("/previous_comments/<ass_id>/<user_id>")
+def get_previous_comments(ass_id, user_id):
+    # /api/v1/courses/:course_id/assignments/:assignment_id/submissions/:user_id
+    endpoint = f"{current_app.config['CANVAS_DOMAIN']}/courses/{current_app.config['COURSE_ID']}/assignments/{ass_id}/submissions/{user_id}"
+    params = {"include": "submission_comments"}
+    resp = fetch_endpoint_blocking(endpoint, params)
+    print(resp)
+    comments = []
+    for item in resp["submission_comments"]:
+        comments.append(
+            f"""[{item["created_at"]}]\n{item["author_name"]}:\n{item["comment"]}\n"""
+        )
+
+    comments = "\n".join(comments)
+    return comments if comments is not None else "No comments"
 
 
 @view.route("/put-canv", methods=["POST"])

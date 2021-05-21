@@ -102,6 +102,22 @@
 
 
 <section class="section">
+
+      <div id="tabs" class="tabs is-right is-boxed" >
+        <ul>
+            <li >
+              <a onclick="loadTempStoredFeedback();" class="button">
+                <span>New comment</span>
+              </a>
+            </li>
+            <li >
+              <a onclick="fetching_comment({{context.content['assignment_id']}}, {{context.content['user_id']}});" class="button is-active">
+                <span>Previous comments</span>
+              </a>
+            </li>
+        </ul>
+      </div>
+
     <div class="container custom-ace-container">
         <div class="columns ">
             <div id="parent-to-ace" class="column is-three-fifths is-mobile">
@@ -111,6 +127,7 @@
                 <h1>Could not find file</h1>
                 {% endif %}
             </div>
+
             <div id="parent-to-ace" class="column is-mobile">
                 <div id="feedback-field" form="save_to_canvas">Feedback to {{ context.content['sis_user_id'] }}:</div>
             </div>
@@ -140,6 +157,7 @@
 <div class="level">
     <div class="level-left"></div>
         <div class="level-right">
+          <div class="" hx-get="/get_submission_status/{{ context.content['assignment_id'] }}/{{ context.content['user_id'] }}" hx-trigger="load" hx-indicator="#fetch_progressing" hx-target="#entered-grade" hx-swap="innerHTML">
           </div>
             <div style="background-color:#fff">
             </div>
@@ -170,7 +188,7 @@
 </footer>
 
 <script>
-    var assignment_name = "{{ context.assignment_name }}";
+    var assignment_id = "{{ context.content['assignment_id'] }}";
     var group_n = "{{ context.content['group_nr'] }}";
 </script>
 
