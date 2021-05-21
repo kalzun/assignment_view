@@ -287,7 +287,6 @@ def get_previous_comments(ass_id, user_id):
     endpoint = f"{current_app.config['CANVAS_DOMAIN']}/courses/{current_app.config['COURSE_ID']}/assignments/{ass_id}/submissions/{user_id}"
     params = {"include": "submission_comments"}
     resp = fetch_endpoint_blocking(endpoint, params)
-    print(resp)
     comments = []
     for item in resp["submission_comments"]:
         comments.append(
