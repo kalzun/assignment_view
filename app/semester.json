@@ -1,7 +1,6 @@
 {
     "COURSE_ID": "26755",
     "COURSECODE": "DATA110",
-    "N_OF_GROUPS": "6",
     "DB": "db.sqlite",
     "SUBMISSION_FOLDER": "api_submissions",
     "CANVAS_DOMAIN": "https://mitt.uib.no/api/v1"

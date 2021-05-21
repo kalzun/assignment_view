@@ -1,36 +1,29 @@
 import json
 import logging
-import os
 from logging import handlers
+from pathlib import Path
 
 from flask import Flask
 
 
 def create_app(test_config=None):
-    # To run the development server:
-    # export FLASK_APP=sort_server.py
-    # flask run
 
-    # Specific flask settings:
     app = Flask(
         __name__,
         static_url_path="",
         static_folder="static",
         template_folder="templates",
-        root_path="app",
+        root_path=Path(__file__).absolute().parent,
     )
-    # Contains the coursecode e.g.
-    SEMESTER_FILE = "semester.json"
+
+    SEMESTER_FILE = app.root_path / Path("semester.json")
     with app.open_resource(SEMESTER_FILE) as f:
         SETTINGS = json.load(f)
-
-    logging.getLogger(__name__)
 
     CONFIG = {
         "COURSE_ID": SETTINGS["COURSE_ID"],
         "COURSECODE": SETTINGS["COURSECODE"],
-        "N_OF_GROUPS": int(SETTINGS["N_OF_GROUPS"]),
-        "DB": SETTINGS["DB"],
+        "DB": Path(app.root_path) / Path(SETTINGS["DB"]),
         "SUBMISSION_FOLDER": SETTINGS["SUBMISSION_FOLDER"],
         "CANVAS_DOMAIN": SETTINGS["CANVAS_DOMAIN"],
     }
@@ -59,7 +52,7 @@ def create_app(test_config=None):
         f"{app.root_path}/logs/main.log", backupCount=5, maxBytes=10000000
     )
     rfh.setFormatter(formatter)
-    logging.getLogger().addHandler(rfh)
+    logger.addHandler(rfh)
 
     # Reduce logging from imported modules that logs
     logging.getLogger("werkzeug").setLevel(logging.WARNING)

@@ -7,6 +7,10 @@ from flask import g
 from flask.cli import with_appcontext
 
 
+def get_db_path():
+    return current_app.config["DB"]
+
+
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(
@@ -23,9 +27,10 @@ def reset_db_command():
     """Resets db"""
     with closing(get_db()) as conn:
         if input("Reset DB? (y/n) >>> ").lower() == "y":
-            conn.execute("DROP TABLE info")
-            conn.execute("DROP TABLE submissions")
-            conn.execute("DROP TABLE attachments")
+            print("RESET")
+            # conn.execute("DROP TABLE info")
+            # conn.execute("DROP TABLE submissions")
+            # conn.execute("DROP TABLE attachments")
 
 
 def close_db(e=None):

@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from flask import current_app
 
 from .db import get_db
+from .db import get_db_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -70,44 +71,42 @@ def create_tables():
     Make table for db
     """
 
-    with closing(sqlite3.connect(DB)) as conn:
-        with closing(conn.cursor()) as cursor:
+    with closing(get_db()) as conn:
+        # Another table for meta-info about latest fetch, etc
+        conn.execute(
+            """CREATE TABLE info
+            (latest_fetch INTEGER)"""
+        )
 
-            # Another table for meta-info about latest fetch, etc
-            cursor.execute(
-                """CREATE TABLE info
-                (latest_fetch INTEGER)"""
-            )
+        # Another table for submissions -
+        conn.execute(
+            """CREATE TABLE submissions
+            (submission_id INTEGER,
+            assignment_id INTEGER,
+            assignment_name TEXT,
+            grader_id INTEGER,
+            current_grade TEXT,
+            current_grader TEXT,
+            group_nr INTEGER,
+            sis_user_id TEXT,
+            user_name TEXT,
+            user_id INTEGER
+            )"""
+        )
 
-            # Another table for submissions -
-            cursor.execute(
-                """CREATE TABLE submissions
-                (submission_id INTEGER,
-                assignment_id INTEGER,
-                assignment_name TEXT,
-                grader_id INTEGER,
-                current_grade TEXT,
-                current_grader TEXT,
-                group_nr INTEGER,
-                sis_user_id TEXT,
-                user_name TEXT,
-                user_id INTEGER
-                )"""
-            )
+        # Another table for attachments - for multiple attachments
+        conn.execute(
+            """CREATE TABLE attachments
+            (displayname TEXT,
+            filename TEXT,
+            modified_at REAL,
+            code BLOB,
+            submission_id INTEGER,
+            FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
+            )"""
+        )
 
-            # Another table for attachments - for multiple attachments
-            cursor.execute(
-                """CREATE TABLE attachments
-                (displayname TEXT,
-                filename TEXT,
-                modified_at REAL,
-                code BLOB,
-                submission_id INTEGER,
-                FOREIGN KEY(submission_id) REFERENCES submissions(submission_id)
-                )"""
-            )
-
-            cursor.execute("INSERT INTO info VALUES (?)", (0,))
+        conn.execute("INSERT INTO info VALUES (?)", (0,))
 
         conn.commit()
 
@@ -388,7 +387,7 @@ async def fetch_all_paginated_pages(urls: list, **kwargs) -> None:
     Consume the urls list, fetch all submissions, store in sql
     """
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with aiosqlite.connect(DB, timeout=30) as conn:
+        async with aiosqlite.connect(get_db_path(), timeout=30) as conn:
             tasks = []
             for _ in range(len(URLS)):
                 url = URLS.pop()
@@ -441,56 +440,44 @@ def clear_table():
     Before making a solution to update values in db,
     we just clear the db when updating from API.
     """
-    with closing(sqlite3.connect(DB)) as conn:
-        with closing(conn.cursor()) as cursor:
-            cursor.execute("DELETE FROM info")
-            cursor.execute("INSERT INTO info VALUES (?)", (0,))
-            conn.commit()
-            logger.debug("Cleared tables of records, stored stdvalue(0) in info-table")
+    conn = get_db()
+    conn.execute("DELETE FROM info")
+    conn.execute("INSERT INTO info VALUES (?)", (0,))
+    conn.commit()
+    logger.debug("Cleared tables of records, stored stdvalue(0) in info-table")
 
 
 def get_last_update_time():
-    with closing(sqlite3.connect(DB)) as conn:
-        with closing(conn.cursor()) as cursor:
-            stats["last_update_time"] = cursor.execute(
-                "SELECT latest_fetch FROM info"
-            ).fetchone()[0]
-            conn.commit()
-            logger.debug(f"Last update time: {stats['last_update_time']}.")
+    conn = get_db()
+    stats["last_update_time"] = conn.execute(
+        "SELECT latest_fetch FROM info"
+    ).fetchone()[0]
+    conn.commit()
+    logger.debug(f"Last update time: {stats['last_update_time']}.")
 
 
 def set_last_update_time():
-    with closing(sqlite3.connect(DB)) as conn:
-        with closing(conn.cursor()) as cursor:
-            logger.debug(f"Set last update time: {time.time()} <- (not prec).")
-            cursor.execute("UPDATE info set latest_fetch=?", (time.time(),))
-            conn.commit()
+    conn = get_db()
+    logger.debug(f"Set last update time: {time.time()} <- (not prec).")
+    conn.execute("UPDATE info set latest_fetch=?", (time.time(),))
+    conn.commit()
 
 
 def db_validator():
-    with closing(sqlite3.connect(DB)) as conn:
-        try:
-            info, submissions, attachments = (
-                conn.execute("SELECT * FROM info").fetchone(),
-                conn.execute("SELECT * FROM submissions").fetchone(),
-                conn.execute("SELECT * FROM attachments").fetchone(),
-            )
-        except sqlite3.OperationalError as err:
-            logger.debug(f"Db error, not setup tables - {err}")
-            logger.debug(f"Creating tables")
-            create_tables()
-            return False
+    conn = get_db()
+    try:
+        info, submissions, attachments = (
+            conn.execute("SELECT * FROM info").fetchone(),
+            conn.execute("SELECT * FROM submissions").fetchone(),
+            conn.execute("SELECT * FROM attachments").fetchone(),
+        )
+    except sqlite3.OperationalError as err:
+        logger.debug(f"Db error, not setup tables - {err}")
+        logger.debug(f"Creating tables")
+        create_tables()
+        return False
 
     return bool(submissions)
-
-
-def db_setup():
-    if Path(DB).exists():
-        logger.debug("Db is created")
-        return True
-    else:
-        logger.debug("Db is not setup")
-        create_tables()
 
 
 async def main():
